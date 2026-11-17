@@ -499,6 +499,64 @@ export function createPlayerTransferTransaction(params: {
 }
 
 /**
+ * Peer-to-peer settlement payment
+ * When Player A (who owes money) pays Player B (who is owed money):
+ * - Credit Player A by amountPaise (extinguishes their debt liability, bringing balance to 0).
+ * - Debit Player B by amountPaise (extinguishes their receivable credit, bringing balance to 0).
+ * Both accounts net to exactly ₹0 upon complete settlement.
+ */
+export function createSettlementPaymentTransaction(params: {
+  fromPlayerId: string
+  toPlayerId: string
+  fromPlayerName?: string
+  toPlayerName?: string
+  amountPaise: number
+  transferId?: string
+  notes?: string
+  timestamp?: number
+}): Transaction {
+  const { fromPlayerId, toPlayerId, fromPlayerName, toPlayerName, amountPaise, transferId, notes, timestamp = Date.now() } = params
+  assertPaiseInteger(amountPaise, 'Settlement payment')
+  if (amountPaise <= 0) throw new AccountingError('Payment amount must be greater than zero')
+  if (fromPlayerId === toPlayerId) throw new AccountingError('Cannot transfer money to the same player')
+
+  const txId = generateTransactionId('tx_settle')
+  const fromAccount = getPlayerAccountId(fromPlayerId)
+  const toAccount = getPlayerAccountId(toPlayerId)
+
+  const entries: LedgerEntry[] = [
+    {
+      id: generateEntryId(),
+      transactionId: txId,
+      accountId: fromAccount,
+      type: 'CREDIT',
+      amountPaise,
+      createdAt: timestamp,
+    },
+    {
+      id: generateEntryId(),
+      transactionId: txId,
+      accountId: toAccount,
+      type: 'DEBIT',
+      amountPaise,
+      createdAt: timestamp,
+    },
+  ]
+
+  validateTransactionEntries(entries)
+
+  return {
+    id: txId,
+    timestamp,
+    category: 'BOARD_SETTLEMENT_ALLOCATION',
+    description: `Settlement: ${fromPlayerName || 'Player'} paid ₹${(amountPaise / 100).toFixed(0)} to ${toPlayerName || 'Player'}`,
+    notes: notes || 'Final peer-to-peer settlement payment',
+    entries,
+    metadata: { transferId, isSettlementPayment: true },
+  }
+}
+
+/**
  * Initial Board Funding Transaction
  * Explicit financial movement from External Source to Board.
  * - Debit ACCOUNT_EXTERNAL
@@ -725,3 +783,4 @@ export function createReversalTransaction(
     reversedTransactionId: originalTx.id,
   }
 }
+

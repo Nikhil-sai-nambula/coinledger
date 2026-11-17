@@ -79,7 +79,7 @@ export function calculateGreedySettlementTransfers(
     if (transferAmount > 0) {
       transferCount += 1
       transfers.push({
-        id: `settle_tr_${Date.now()}_${transferCount}_${Math.random().toString(36).substring(2, 6)}`,
+        id: `settle_${debtor.playerId}_to_${creditor.playerId}_${transferCount}`,
         fromPlayerId: debtor.playerId,
         toPlayerId: creditor.playerId,
         amountPaise: transferAmount,
@@ -151,8 +151,11 @@ export function evaluateSettlementPlan(params: {
     }
   }
 
-  // All invariants met: Calculate player net positions and solve minimal transfers
-  const playerBalances = calculatePlayerBalances(allEntries, players)
+  // All invariants met: Calculate player net positions from gameplay (excluding peer-to-peer settlement payments)
+  const gameEntries = transactions
+    .filter(t => !t.metadata?.isSettlementPayment)
+    .flatMap(t => t.entries)
+  const playerBalances = calculatePlayerBalances(gameEntries, players)
   const balanceList = players.map(p => ({
     playerId: p.id,
     playerName: p.name,
@@ -277,3 +280,4 @@ export function createRefundBoardFundsToExternalTransaction(params: {
     entries,
   }
 }
+

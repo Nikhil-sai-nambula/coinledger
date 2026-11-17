@@ -56,16 +56,22 @@ export interface Player {
   name: string
   avatarColor: string
   createdAt: number
+  isActive?: boolean
 }
 
 export interface Round {
   id: string
   roundNumber: number
   name?: string
-  status: 'ACTIVE' | 'COMPLETED'
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
   createdAt: number
   completedAt?: number
   notes?: string
+  winnerPlayerIds?: string[]
+  boardMoneyPaise?: number
+  totalPotPaise?: number
+  participatingPlayerIds?: string[]
+  cancellationReason?: string
 }
 
 export interface SettlementTransfer {
@@ -118,6 +124,7 @@ export interface PlayerBalanceSummary {
 export interface GameState {
   gameName: string
   createdAt: number
+  boardMoneyPaise?: number
   players: Player[]
   rounds: Round[]
   transactions: Transaction[]
@@ -125,3 +132,4 @@ export interface GameState {
   boardAllocationConfirmed: boolean
   boardAllocationOption?: 'DISTRIBUTE_EQUAL' | 'REFUND_EXTERNAL' | 'HOST_RAKE' | 'CUSTOM' | 'LEAVE_UNALLOCATED'
 }
+

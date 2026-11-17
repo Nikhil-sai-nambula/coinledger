@@ -106,3 +106,4 @@ export function formatPaisePlain(paise: number): string {
   }
   return `${sign}${rupees}.${remainingPaise.toString().padStart(2, '0')}`
 }
+
