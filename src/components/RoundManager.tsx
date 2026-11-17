@@ -117,8 +117,8 @@ export const RoundManager: React.FC = () => {
             const isCancelled = round.status === 'CANCELLED'
             const isActive = round.status === 'ACTIVE'
             const roundTxs = state.transactions.filter(t => t.roundId === round.id)
-            const bets = roundTxs.filter(t => t.category === 'BOARD_PAYOUT' || (t.category === 'PLAYER_CONTRIBUTION' && !t.notes?.includes('board fee')))
-            const anteTxs = roundTxs.filter(t => t.category === 'PLAYER_CONTRIBUTION' && t.notes?.includes('board fee'))
+            const bets = roundTxs.filter(t => t.category === 'BOARD_PAYOUT' || (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
+            const anteTxs = roundTxs.filter(t => t.category === 'PLAYER_CONTRIBUTION' && !(t.notes || '').toLowerCase().includes('lost bet'))
 
             return (
               <div

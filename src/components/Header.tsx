@@ -41,8 +41,8 @@ export const Header: React.FC = () => {
     <>
       {/* Main Navbar */}
       <header className="border-b border-[#D8D8D8] bg-white/95 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5">
+          <div className="flex flex-row items-center justify-between gap-2 md:gap-4">
 
             {/* Left: Coins Ledger Official Logo */}
             <div className="flex items-center gap-4">
@@ -55,7 +55,7 @@ export const Header: React.FC = () => {
             </div>
 
             {/* Right: Live Metrics & Quick Actions */}
-            <div className="flex items-center gap-2.5 self-end md:self-auto flex-wrap">
+            <div className="flex items-center gap-2 md:gap-2.5 shrink-0">
 
               {/* Table Status Pill */}
               <div className="hidden sm:flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-[#F8F8F8] border border-[#D8D8D8] text-xs font-mono">
@@ -102,29 +102,31 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Navigation Bar Tabs */}
-          <nav className="flex items-center gap-2 mt-3 pt-3 border-t border-[#D8D8D8] overflow-x-auto no-scrollbar text-xs font-mono">
+          <nav className="flex items-center gap-1.5 sm:gap-2 mt-2 pt-2 sm:mt-3 sm:pt-3 border-t border-[#D8D8D8] text-xs font-mono">
             <button
               onClick={() => setCurrentTab('play')}
-              className={`px-4 py-2 rounded-[12px] transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 font-bold ${
+              className={`px-2 sm:px-4 py-2 rounded-[12px] transition-all whitespace-nowrap cursor-pointer flex flex-1 sm:flex-initial items-center justify-center gap-2 font-bold ${
                 currentTab === 'play' || currentTab === 'overview'
                   ? 'bg-black text-white shadow-sm font-black'
                   : 'text-[#616161] hover:text-black hover:bg-[#F0F0F0]'
               }`}
             >
               <Play size={13} className={currentTab === 'play' || currentTab === 'overview' ? 'fill-current' : ''} />
-              <span>PLAY DECK</span>
+              <span className="sm:hidden">PLAY</span>
+              <span className="hidden sm:inline">PLAY DECK</span>
             </button>
 
             <button
               onClick={() => setCurrentTab('rounds')}
-              className={`px-4 py-2 rounded-[12px] transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 font-bold ${
+              className={`px-2 sm:px-4 py-2 rounded-[12px] transition-all whitespace-nowrap cursor-pointer flex flex-1 sm:flex-initial items-center justify-center gap-2 font-bold ${
                 currentTab === 'rounds'
                   ? 'bg-black text-white shadow-sm font-black'
                   : 'text-[#616161] hover:text-black hover:bg-[#F0F0F0]'
               }`}
             >
               <History size={13} />
-              <span>ROUNDS TIMELINE</span>
+              <span className="sm:hidden">ROUNDS</span>
+              <span className="hidden sm:inline">ROUNDS TIMELINE</span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
                 currentTab === 'rounds' ? 'bg-[#B6EA84] text-black' : 'bg-[#E5E5E5] text-[#404040]'
               }`}>
@@ -134,14 +136,15 @@ export const Header: React.FC = () => {
 
             <button
               onClick={() => setCurrentTab('settlement')}
-              className={`px-4 py-2 rounded-[12px] transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 font-bold ${
+              className={`px-2 sm:px-4 py-2 rounded-[12px] transition-all whitespace-nowrap cursor-pointer flex flex-1 sm:flex-initial items-center justify-center gap-2 font-bold ${
                 currentTab === 'settlement'
                   ? 'bg-black text-white shadow-sm font-black'
                   : 'text-[#616161] hover:text-black hover:bg-[#F0F0F0]'
               }`}
             >
               <Coins size={13} />
-              <span>FINAL SETTLEMENT</span>
+              <span className="sm:hidden">SETTLE</span>
+              <span className="hidden sm:inline">FINAL SETTLEMENT</span>
             </button>
           </nav>
         </div>

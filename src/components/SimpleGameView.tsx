@@ -28,6 +28,9 @@ import {
   ShieldCheck,
   Pause,
   Undo2,
+  ChevronDown,
+  ChevronUp,
+  Settings2,
 } from 'lucide-react'
 
 // Coins Ledger Presets starting from ₹2, ₹5, ₹10, ₹20, ₹50, ₹100
@@ -385,8 +388,28 @@ export const SimpleGameView: React.FC = () => {
     .filter(t => t.roundId === activeRound?.id && (t.category === 'BOARD_PAYOUT' || t.category === 'PLAYER_CONTRIBUTION'))
     .slice(0, 4)
 
+  // Undo is only offered for real declared bets (won payouts / lost-bet payments),
+  // never for board-fee contributions.
+  const hasUndoableBet = state.transactions.some(
+    t => t.roundId === activeRound?.id &&
+         (t.category === 'BOARD_PAYOUT' ||
+          (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
+  )
+
+  // Mobile: game setup accordion (board fee + player management) - expanded pre-game,
+  // auto-collapses to a one-line summary once play begins; desktop always shows everything.
+  const gameHasActivity = recentBets.length > 0 || completedRoundsCount > 0
+  const [setupOpen, setSetupOpen] = useState(!gameHasActivity)
+  const setupAutoCollapsed = React.useRef(false)
+  React.useEffect(() => {
+    if (!setupAutoCollapsed.current && gameHasActivity) {
+      setupAutoCollapsed.current = true
+      setSetupOpen(false)
+    }
+  }, [gameHasActivity])
+
   return (
-    <div className="space-y-5 max-w-6xl mx-auto pb-28 sm:pb-8">
+    <div className="space-y-4 sm:space-y-5 max-w-6xl mx-auto pb-8">
 
       {/* Celebration Notification */}
       {celebrationMsg && (
@@ -400,28 +423,34 @@ export const SimpleGameView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
         {/* BentoML Signature Lime Hero Pot Tile */}
-        <div className="md:col-span-5 cl-card-pot bento-card-green p-6 sm:p-7 flex flex-col justify-between">
+        <div className="md:col-span-5 cl-card-pot bento-card-green p-4 sm:p-7 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-mono tracking-widest uppercase font-black text-[#B6EA84] bg-black px-3 py-1 rounded-full">
                 BOARD POT
               </span>
-              <div className="cta-arrow-btn bg-black text-[#B6EA84] border border-black">
+              <button
+                type="button"
+                onClick={() => setCurrentTab('settlement')}
+                className="cta-arrow-btn bg-black text-[#B6EA84] border border-black cursor-pointer"
+                title="Go to settlement"
+                aria-label="Go to settlement"
+              >
                 <ArrowUpRight size={16} />
-              </div>
+              </button>
             </div>
 
             <div className="mt-4">
               <span className="text-xs font-mono font-bold text-black/70 uppercase tracking-wider block">
                 Board Money Remaining
               </span>
-              <span className="text-4xl sm:text-5xl font-black font-mono tracking-tight text-black block mt-1">
+              <span className="text-3xl sm:text-5xl font-black font-mono tracking-tight text-black block mt-1">
                 {formatPaise(boardBalancePaise)}
               </span>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-black/15 flex items-center justify-between text-xs font-mono font-bold text-black">
+          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 border-t border-black/15 flex items-center justify-between text-xs font-mono font-bold text-black">
             <span>{activeRound ? `Round #${currentRoundNum} Active` : 'Game Settled'}</span>
             <span>
               {activeCount} {activeCount === 1 ? 'Player' : 'Players'} Active
@@ -431,7 +460,7 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* BentoML Signature Deep Forest Hero Headline & Actions Tile */}
-        <div className="md:col-span-7 cl-card-dark bento-card-dark p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden">
+        <div className="md:col-span-7 cl-card-dark bento-card-dark p-4 sm:p-7 flex flex-col justify-between relative overflow-hidden">
           <div className="space-y-2 relative z-10">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-mono tracking-widest uppercase font-bold text-[#B6EA84] bg-[#B6EA84]/15 border border-[#B6EA84]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
@@ -441,21 +470,21 @@ export const SimpleGameView: React.FC = () => {
               <span className="text-xs text-[#D0E6D6]/80 font-mono">
                 {completedRoundsCount} {completedRoundsCount === 1 ? 'Round' : 'Rounds'} Completed
               </span>
-              <span className="text-[10px] font-mono text-[#194220] bg-[#B6EA84] px-2 py-0.5 rounded-full font-bold">
+              <span className="hidden sm:inline-block text-[10px] font-mono text-[#194220] bg-[#B6EA84] px-2 py-0.5 rounded-full font-bold">
                 ⚡ Auto-advances when pot clears
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            <h1 className="hidden sm:block text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
               Board Pot <span className="text-[#B6EA84]">Without Complexity</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#D0E6D6]/80 max-w-md leading-relaxed">
+            <p className="hidden sm:block text-xs sm:text-sm text-[#D0E6D6]/80 max-w-md leading-relaxed">
               When a round finishes, the new round starts automatically. Change board fee anytime to dynamically adjust the pot. Cancel current or previous rounds with 1 click.
             </p>
           </div>
 
           {/* DEDICATED CANCELLATION & ROUND CONTROLS */}
-          <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5 relative z-10">
+          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5 relative z-10">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Cancel Current Round Button */}
               <button
@@ -468,17 +497,18 @@ export const SimpleGameView: React.FC = () => {
                 <span>Cancel Round #{currentRoundNum}</span>
               </button>
 
-              {/* Cancel Previous Round Button */}
-              <button
-                type="button"
-                onClick={() => setShowCancelPrevModal(true)}
-                disabled={!lastCompletedRound}
-                className="py-2.5 px-3.5 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                title={lastCompletedRound ? `Cancel and void previous Round #${lastCompletedRound.roundNumber}` : 'No previous completed round to cancel'}
-              >
-                <RotateCcw size={14} className="text-[#D0E6D6]" />
-                <span>Cancel Prev #{lastCompletedRound?.roundNumber || ''}</span>
-              </button>
+              {/* Cancel Previous Round Button (only when a previous round exists) */}
+              {lastCompletedRound && (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelPrevModal(true)}
+                  className="py-2.5 px-3.5 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  title={`Cancel and void previous Round #${lastCompletedRound.roundNumber}`}
+                >
+                  <RotateCcw size={14} className="text-[#D0E6D6]" />
+                  <span>Cancel Prev #{lastCompletedRound.roundNumber}</span>
+                </button>
+              )}
             </div>
 
             {/* Complete Round & Next Round / Complete Game & Settle */}
@@ -512,7 +542,7 @@ export const SimpleGameView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* The Betting Deck */}
-        <div className="lg:col-span-7 cl-card-charcoal bento-card-white p-6 sm:p-7 space-y-5">
+        <div className="lg:col-span-7 cl-card-charcoal bento-card-white p-4 sm:p-7 space-y-4 sm:space-y-5">
           <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-[8px] bg-[#B6EA84] text-black border border-black flex items-center justify-center font-black text-xs">
@@ -731,19 +761,22 @@ export const SimpleGameView: React.FC = () => {
                 <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block font-bold">
                   Bets in Current Round #{currentRoundNum}:
                 </span>
-                <button
-                  type="button"
-                  onClick={handleUndoLastBet}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-[#F8F8F8] hover:bg-black hover:text-white border border-[#D8D8D8] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                  title="Undo the last recorded bet action"
-                >
-                  <Undo2 size={12} />
-                  <span>Undo Last Bet</span>
-                </button>
+                {hasUndoableBet && (
+                  <button
+                    type="button"
+                    onClick={handleUndoLastBet}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-[#F8F8F8] hover:bg-black hover:text-white border border-[#D8D8D8] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    title="Undo the last recorded bet action"
+                  >
+                    <Undo2 size={12} />
+                    <span>Undo Last Bet</span>
+                  </button>
+                )}
               </div>
               <div className="space-y-1.5">
                 {recentBets.map(tx => {
                   const isWon = tx.category === 'BOARD_PAYOUT'
+                  const isFee = !isWon && !(tx.notes || '').toLowerCase().includes('lost bet')
                   const pEntry = tx.entries.find(e => e.accountId.startsWith('ACCOUNT_PLAYER_'))
                   const playerId = pEntry?.accountId.replace('ACCOUNT_PLAYER_', '')
                   const player = players.find(p => p.id === playerId)
@@ -755,13 +788,13 @@ export const SimpleGameView: React.FC = () => {
                       className="p-2 rounded-[12px] bg-[#F8F8F8] border border-[#E5E5E5] flex items-center justify-between text-xs font-mono"
                     >
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${isWon ? 'bg-[#194220]' : 'bg-[#EB5757]'}`} />
+                        <span className={`w-2 h-2 rounded-full ${isWon ? 'bg-[#194220]' : isFee ? 'bg-[#9E9E9E]' : 'bg-[#EB5757]'}`} />
                         <span className="font-sans font-bold text-black">{player?.name || 'Player'}</span>
                         <span className="text-[#616161] text-[11px] font-sans">
-                          {isWon ? 'won' : 'lost'} bet
+                          {isWon ? 'won bet' : isFee ? 'paid board fee' : 'lost bet'}
                         </span>
                       </div>
-                      <span className={`font-black ${isWon ? 'text-[#194220]' : 'text-[#EB5757]'}`}>
+                      <span className={`font-black ${isWon ? 'text-[#194220]' : isFee ? 'text-[#616161]' : 'text-[#EB5757]'}`}>
                         {isWon ? `+${formatPaise(amt)}` : `-${formatPaise(amt)}`}
                       </span>
                     </div>
@@ -774,6 +807,24 @@ export const SimpleGameView: React.FC = () => {
 
         {/* Board Fee & Table Setup */}
         <div className="lg:col-span-5 space-y-4">
+
+          {/* Mobile: Game setup accordion toggle (desktop always shows everything below) */}
+          <button
+            type="button"
+            onClick={() => setSetupOpen(o => !o)}
+            className="lg:hidden w-full flex items-center justify-between gap-2 p-3.5 rounded-[16px] bg-white border border-[#D8D8D8] cursor-pointer shadow-sm"
+          >
+            <span className="flex items-center gap-2 text-xs font-extrabold text-black">
+              <Settings2 size={14} className="text-[#194220]" />
+              <span>Game setup</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-[11px] font-mono text-[#616161] font-bold">
+              <span>{formatPaise(boardMoneyPaise)} / player &bull; {activeCount} players</span>
+              {setupOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </span>
+          </button>
+
+          <div className={`${setupOpen ? 'space-y-4' : 'hidden'} lg:block lg:space-y-4`}>
 
           {/* Board Fee Config Box */}
           <div className="cl-card-charcoal bento-card-white p-6 space-y-4 bg-white border border-[#D8D8D8] rounded-[20px]">
@@ -956,6 +1007,8 @@ export const SimpleGameView: React.FC = () => {
             </div>
           </div>
 
+          </div>{/* end mobile setup accordion wrapper */}
+
         </div>
 
       </div>
@@ -994,8 +1047,8 @@ export const SimpleGameView: React.FC = () => {
           </div>
         </div>
 
-        {/* Scoreboard Table */}
-        <div className="overflow-x-auto">
+        {/* Scoreboard Table (desktop) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-[#E5E5E5] text-[#616161] uppercase tracking-wider font-mono text-[10px]">
@@ -1065,6 +1118,40 @@ export const SimpleGameView: React.FC = () => {
                 })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: stacked scoreboard rows (no horizontal scrolling) */}
+        <div className="sm:hidden divide-y divide-[#E5E5E5]">
+          {[...players]
+            .sort((a, b) => (playerSummaries[b.id]?.netPositionPaise || 0) - (playerSummaries[a.id]?.netPositionPaise || 0))
+            .map((p, idx) => {
+              const s = playerSummaries[p.id]
+              const net = s?.netPositionPaise || 0
+              const paid = s?.totalContributionsPaise || 0
+              const won = s?.totalPayoutsPaise || 0
+
+              return (
+                <div key={p.id} className="py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[#888888] text-[10px] w-4 shrink-0 font-mono">
+                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}
+                    </span>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-black bg-[#B6EA84] border border-black shrink-0">
+                      {p.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-black truncate block">{p.name}</span>
+                      <span className="text-[10px] font-mono text-[#616161] block">
+                        -{formatPaise(paid)} fees &middot; +{formatPaise(won)} won
+                      </span>
+                    </div>
+                  </div>
+                  <span className={`text-sm font-black font-mono shrink-0 ${net > 0 ? 'text-[#194220]' : net < 0 ? 'text-[#EB5757]' : 'text-[#616161]'}`}>
+                    {net > 0 ? `+${formatPaise(net)}` : formatPaise(net)}
+                  </span>
+                </div>
+              )
+            })}
         </div>
       </div>
 
@@ -1250,55 +1337,6 @@ export const SimpleGameView: React.FC = () => {
               >
                 Yes, Cancel Round #{lastCompletedRound.roundNumber}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MOBILE STICKY BOTTOM PLAY BAR */}
-      {!isBettingDisabled && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-white/95 border-t border-[#D8D8D8] p-3 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-2 max-w-md mx-auto">
-            <div className="min-w-0">
-              <span className="text-[10px] text-[#616161] font-mono block">
-                POT: <strong className="text-[#194220] font-bold">{formatPaise(boardBalancePaise)}</strong>
-              </span>
-              <span className="text-xs font-bold text-black truncate block">
-                {players.find(p => p.id === bettingPlayerId)?.name}: ₹{betAmountRupees}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => handleExecuteBet('WON')}
-                disabled={boardBalancePaise <= 0 || !betAmountRupees || parseInt(betAmountRupees) <= 0 || parseInt(betAmountRupees) > currentBoardRupees}
-                className="px-4 py-2.5 rounded-full bg-[#B6EA84] hover:bg-[#a5db71] active:scale-95 text-black font-black text-xs border border-black shadow-sm disabled:opacity-40"
-              >
-                WON
-              </button>
-              <button
-                onClick={() => handleExecuteBet('LOST')}
-                disabled={boardBalancePaise <= 0 || !betAmountRupees || parseInt(betAmountRupees) <= 0 || parseInt(betAmountRupees) > currentBoardRupees}
-                className="px-4 py-2.5 rounded-full bg-[#EB5757] hover:bg-[#d94848] active:scale-95 text-white font-black text-xs border border-black shadow-sm disabled:opacity-40"
-              >
-                LOST
-              </button>
-              <button
-                onClick={() => setShowCancelCurrentModal(true)}
-                className="p-2.5 rounded-full bg-[#F8F8F8] border border-[#D8D8D8] text-black hover:text-[#EB5757] active:scale-95 transition-colors"
-                title="Cancel Current Round"
-              >
-                <Ban size={16} />
-              </button>
-              {lastCompletedRound && (
-                <button
-                  onClick={() => setShowCancelPrevModal(true)}
-                  className="p-2.5 rounded-full bg-[#F8F8F8] border border-[#D8D8D8] text-black hover:text-[#EB5757] active:scale-95 transition-colors"
-                  title={`Cancel Previous Round #${lastCompletedRound.roundNumber}`}
-                >
-                  <RotateCcw size={16} />
-                </button>
-              )}
             </div>
           </div>
         </div>
