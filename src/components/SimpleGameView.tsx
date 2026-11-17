@@ -388,6 +388,14 @@ export const SimpleGameView: React.FC = () => {
     .filter(t => t.roundId === activeRound?.id && (t.category === 'BOARD_PAYOUT' || t.category === 'PLAYER_CONTRIBUTION'))
     .slice(0, 4)
 
+  // Undo is only offered for real declared bets (won payouts / lost-bet payments),
+  // never for board-fee contributions.
+  const hasUndoableBet = state.transactions.some(
+    t => t.roundId === activeRound?.id &&
+         (t.category === 'BOARD_PAYOUT' ||
+          (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
+  )
+
   // Mobile: game setup accordion (board fee + player management) - expanded pre-game,
   // auto-collapses to a one-line summary once play begins; desktop always shows everything.
   const gameHasActivity = recentBets.length > 0 || completedRoundsCount > 0
@@ -421,9 +429,15 @@ export const SimpleGameView: React.FC = () => {
               <span className="text-[11px] font-mono tracking-widest uppercase font-black text-[#B6EA84] bg-black px-3 py-1 rounded-full">
                 BOARD POT
               </span>
-              <div className="cta-arrow-btn bg-black text-[#B6EA84] border border-black">
+              <button
+                type="button"
+                onClick={() => setCurrentTab('settlement')}
+                className="cta-arrow-btn bg-black text-[#B6EA84] border border-black cursor-pointer"
+                title="Go to settlement"
+                aria-label="Go to settlement"
+              >
                 <ArrowUpRight size={16} />
-              </div>
+              </button>
             </div>
 
             <div className="mt-4">
@@ -456,12 +470,12 @@ export const SimpleGameView: React.FC = () => {
               <span className="text-xs text-[#D0E6D6]/80 font-mono">
                 {completedRoundsCount} {completedRoundsCount === 1 ? 'Round' : 'Rounds'} Completed
               </span>
-              <span className="text-[10px] font-mono text-[#194220] bg-[#B6EA84] px-2 py-0.5 rounded-full font-bold">
+              <span className="hidden sm:inline-block text-[10px] font-mono text-[#194220] bg-[#B6EA84] px-2 py-0.5 rounded-full font-bold">
                 ⚡ Auto-advances when pot clears
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            <h1 className="hidden sm:block text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
               Board Pot <span className="text-[#B6EA84]">Without Complexity</span>
             </h1>
             <p className="hidden sm:block text-xs sm:text-sm text-[#D0E6D6]/80 max-w-md leading-relaxed">
@@ -483,17 +497,18 @@ export const SimpleGameView: React.FC = () => {
                 <span>Cancel Round #{currentRoundNum}</span>
               </button>
 
-              {/* Cancel Previous Round Button */}
-              <button
-                type="button"
-                onClick={() => setShowCancelPrevModal(true)}
-                disabled={!lastCompletedRound}
-                className="py-2.5 px-3.5 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                title={lastCompletedRound ? `Cancel and void previous Round #${lastCompletedRound.roundNumber}` : 'No previous completed round to cancel'}
-              >
-                <RotateCcw size={14} className="text-[#D0E6D6]" />
-                <span>Cancel Prev #{lastCompletedRound?.roundNumber || ''}</span>
-              </button>
+              {/* Cancel Previous Round Button (only when a previous round exists) */}
+              {lastCompletedRound && (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelPrevModal(true)}
+                  className="py-2.5 px-3.5 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  title={`Cancel and void previous Round #${lastCompletedRound.roundNumber}`}
+                >
+                  <RotateCcw size={14} className="text-[#D0E6D6]" />
+                  <span>Cancel Prev #{lastCompletedRound.roundNumber}</span>
+                </button>
+              )}
             </div>
 
             {/* Complete Round & Next Round / Complete Game & Settle */}
@@ -746,19 +761,22 @@ export const SimpleGameView: React.FC = () => {
                 <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block font-bold">
                   Bets in Current Round #{currentRoundNum}:
                 </span>
-                <button
-                  type="button"
-                  onClick={handleUndoLastBet}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-[#F8F8F8] hover:bg-black hover:text-white border border-[#D8D8D8] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                  title="Undo the last recorded bet action"
-                >
-                  <Undo2 size={12} />
-                  <span>Undo Last Bet</span>
-                </button>
+                {hasUndoableBet && (
+                  <button
+                    type="button"
+                    onClick={handleUndoLastBet}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-[#F8F8F8] hover:bg-black hover:text-white border border-[#D8D8D8] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    title="Undo the last recorded bet action"
+                  >
+                    <Undo2 size={12} />
+                    <span>Undo Last Bet</span>
+                  </button>
+                )}
               </div>
               <div className="space-y-1.5">
                 {recentBets.map(tx => {
                   const isWon = tx.category === 'BOARD_PAYOUT'
+                  const isFee = !isWon && !(tx.notes || '').toLowerCase().includes('lost bet')
                   const pEntry = tx.entries.find(e => e.accountId.startsWith('ACCOUNT_PLAYER_'))
                   const playerId = pEntry?.accountId.replace('ACCOUNT_PLAYER_', '')
                   const player = players.find(p => p.id === playerId)
@@ -770,13 +788,13 @@ export const SimpleGameView: React.FC = () => {
                       className="p-2 rounded-[12px] bg-[#F8F8F8] border border-[#E5E5E5] flex items-center justify-between text-xs font-mono"
                     >
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${isWon ? 'bg-[#194220]' : 'bg-[#EB5757]'}`} />
+                        <span className={`w-2 h-2 rounded-full ${isWon ? 'bg-[#194220]' : isFee ? 'bg-[#9E9E9E]' : 'bg-[#EB5757]'}`} />
                         <span className="font-sans font-bold text-black">{player?.name || 'Player'}</span>
                         <span className="text-[#616161] text-[11px] font-sans">
-                          {isWon ? 'won' : 'lost'} bet
+                          {isWon ? 'won bet' : isFee ? 'paid board fee' : 'lost bet'}
                         </span>
                       </div>
-                      <span className={`font-black ${isWon ? 'text-[#194220]' : 'text-[#EB5757]'}`}>
+                      <span className={`font-black ${isWon ? 'text-[#194220]' : isFee ? 'text-[#616161]' : 'text-[#EB5757]'}`}>
                         {isWon ? `+${formatPaise(amt)}` : `-${formatPaise(amt)}`}
                       </span>
                     </div>
