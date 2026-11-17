@@ -243,9 +243,13 @@ export const FinalSettlementView: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-[#B6EA84] border border-black text-black flex items-center justify-center mx-auto">
               <CheckCircle2 size={28} />
             </div>
-            <h3 className="text-base font-black text-black">Everyone is Even!</h3>
+            <h3 className="text-base font-black text-black">
+              {boardBalancePaise > 0 ? 'Pot Not Distributed Yet' : 'Everyone is Even!'}
+            </h3>
             <p className="text-xs text-[#616161] max-w-sm mx-auto">
-              {completedRoundsCount === 0
+              {boardBalancePaise > 0
+                ? `The board pot still holds ${formatPaise(boardBalancePaise)}. Distribute it above to compute who pays whom.`
+                : completedRoundsCount === 0
                 ? 'No rounds played yet. Start playing rounds to generate live settlements.'
                 : 'All player balances are completely settled. No one owes anyone anything!'}
             </p>
@@ -353,7 +357,7 @@ export const FinalSettlementView: React.FC = () => {
           </h3>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
             <thead>
               <tr className="border-b border-[#E5E5E5] text-[#616161] uppercase tracking-wider text-[10px]">
@@ -423,6 +427,58 @@ export const FinalSettlementView: React.FC = () => {
                 })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: stacked final positions (no sideways scrolling) */}
+        <div className="sm:hidden divide-y divide-[#E5E5E5]">
+          {[...players]
+            .sort((a, b) => {
+              const gameNetA = (playerSummaries[a.id]?.totalPayoutsPaise || 0) - (playerSummaries[a.id]?.totalContributionsPaise || 0)
+              const gameNetB = (playerSummaries[b.id]?.totalPayoutsPaise || 0) - (playerSummaries[b.id]?.totalContributionsPaise || 0)
+              return gameNetB - gameNetA
+            })
+            .map((p, idx) => {
+              const s = playerSummaries[p.id]
+              const net = s?.netPositionPaise || 0
+              const paid = s?.totalContributionsPaise || 0
+              const won = s?.totalPayoutsPaise || 0
+
+              return (
+                <div key={p.id} className="py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[#888888] text-[10px] w-4 shrink-0 font-mono">
+                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-black truncate block">
+                        {p.name}
+                        {p.isActive === false && (
+                          <span className="ml-1.5 text-[9px] font-mono font-bold bg-[#E5E5E5] text-[#616161] px-1.5 py-0.5 rounded-full">
+                            Sitting Out
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[10px] font-mono text-[#616161] block">
+                        -{formatPaise(paid)} paid &middot; +{formatPaise(won)} won
+                      </span>
+                    </div>
+                  </div>
+                  {net === 0 ? (
+                    <span className="text-[10px] font-black text-black bg-[#B6EA84] border border-black px-2 py-0.5 rounded-full shrink-0 font-mono">
+                      ₹0 Settled
+                    </span>
+                  ) : net < 0 ? (
+                    <span className="text-[10px] font-bold text-[#EB5757] bg-[#EB5757]/15 border border-[#EB5757]/30 px-2 py-0.5 rounded-full shrink-0 font-mono">
+                      Owes {formatPaise(Math.abs(net))}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black text-black bg-[#B6EA84] border border-black px-2 py-0.5 rounded-full shrink-0 font-mono">
+                      Receives {formatPaise(net)}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
         </div>
       </div>
     </div>
