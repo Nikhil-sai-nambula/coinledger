@@ -401,7 +401,7 @@ export const SimpleGameView: React.FC = () => {
   }, [gameHasActivity])
 
   return (
-    <div className="space-y-4 sm:space-y-5 max-w-6xl mx-auto pb-28 sm:pb-8">
+    <div className="space-y-4 sm:space-y-5 max-w-6xl mx-auto pb-8">
 
       {/* Celebration Notification */}
       {celebrationMsg && (
@@ -1318,39 +1318,6 @@ export const SimpleGameView: React.FC = () => {
                 className="px-4 py-2 rounded-full text-xs font-bold bg-[#EB5757] hover:bg-[#d94848] text-white border border-black cursor-pointer shadow-sm"
               >
                 Yes, Cancel Round #{lastCompletedRound.roundNumber}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MOBILE STICKY BOTTOM PLAY BAR */}
-      {!isBettingDisabled && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-white/95 border-t border-[#D8D8D8] px-4 py-3 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
-            <div className="min-w-0 leading-tight">
-              <span className="text-[11px] text-[#616161] font-mono block">
-                POT <strong className="text-[#194220] font-bold">{formatPaise(boardBalancePaise)}</strong>
-              </span>
-              <span className="text-[13px] font-bold text-black truncate block">
-                {players.find(p => p.id === bettingPlayerId)?.name} &middot; ₹{betAmountRupees}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => handleExecuteBet('WON')}
-                disabled={boardBalancePaise <= 0 || !betAmountRupees || parseInt(betAmountRupees) <= 0 || parseInt(betAmountRupees) > currentBoardRupees}
-                className="px-5 py-3 rounded-full bg-[#B6EA84] hover:bg-[#a5db71] active:scale-95 text-black font-black text-sm border border-black shadow-sm disabled:opacity-40"
-              >
-                WON
-              </button>
-              <button
-                onClick={() => handleExecuteBet('LOST')}
-                disabled={boardBalancePaise <= 0 || !betAmountRupees || parseInt(betAmountRupees) <= 0 || parseInt(betAmountRupees) > currentBoardRupees}
-                className="px-5 py-3 rounded-full bg-[#EB5757] hover:bg-[#d94848] active:scale-95 text-white font-black text-sm border border-black shadow-sm disabled:opacity-40"
-              >
-                LOST
               </button>
             </div>
           </div>
