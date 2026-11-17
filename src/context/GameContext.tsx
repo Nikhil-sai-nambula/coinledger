@@ -378,9 +378,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             )
             if (feeTx) {
               const feeAmount = feeTx.entries.find(e => e.accountId === getPlayerAccountId(playerId))?.amountPaise || 0
-              feePaise = feeAmount
-              isRefunded = true
-              newTxs = prev.transactions.filter(t => t.id !== feeTx.id)
+              const potNowPaise = calculateBoardBalance(prev.transactions.flatMap(t => t.entries))
+              if (potNowPaise >= feeAmount) {
+                feePaise = feeAmount
+                isRefunded = true
+                newTxs = prev.transactions.filter(t => t.id !== feeTx.id)
+              }
             }
             updatedRounds = prev.rounds.map(r =>
               r.id === currentActive.id
@@ -390,7 +393,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   }
                 : r
             )
-            message = `${targetPlayer.name} is sitting out. Refunded ₹${(feePaise / 100).toFixed(0)} from active board pot.`
+            message = isRefunded
+              ? `${targetPlayer.name} is sitting out. Refunded ₹${(feePaise / 100).toFixed(0)} from active board pot.`
+              : `${targetPlayer.name} is sitting out. Board fee already distributed - no refund due.`
           } else {
             message = `${targetPlayer.name} will sit out starting from next round.`
           }
@@ -767,7 +772,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const betTx = state.transactions.find(
       t => t.roundId === currentActive.id &&
            (t.category === 'BOARD_PAYOUT' ||
-            (t.category === 'PLAYER_CONTRIBUTION' && !t.notes?.includes('board fee')))
+            (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
     )
 
     if (!betTx) {
