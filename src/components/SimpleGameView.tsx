@@ -611,7 +611,7 @@ export const SimpleGameView: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 lg:mt-4 lg:pt-3 border-t border-black/15 flex items-center justify-between text-xs font-mono font-bold text-black">
+          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 lg:mt-4 lg:pt-3 border-t border-black/15 flex items-center justify-between text-xs font-mono font-semibold text-black/80">
             <span>{activeRound ? `Round #${currentRoundNum} Active` : 'Game Settled'}</span>
             <span>
               {activeCount} {activeCount === 1 ? 'Player' : 'Players'} Active
