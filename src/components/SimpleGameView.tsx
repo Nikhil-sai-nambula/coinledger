@@ -917,7 +917,7 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* Board Fee & Table Setup */}
-        <div ref={setupSectionRef} className={`lg:col-span-5 space-y-4 scroll-mt-20 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
+        <div ref={setupSectionRef} className={`lg:col-span-5 space-y-4 scroll-mt-28 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
 
           {/* Mobile: Game setup accordion toggle (desktop always shows everything below) */}
           <button
