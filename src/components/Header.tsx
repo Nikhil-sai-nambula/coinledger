@@ -194,6 +194,7 @@ export const Header: React.FC = () => {
                 type="button"
                 onClick={() => {
                   resetGame()
+                  setCurrentTab('play')
                   setShowResetConfirm(false)
                 }}
                 className="px-4 py-2 rounded-full text-xs font-black bg-[#EB5757] hover:bg-[#d64141] text-white border border-black cursor-pointer shadow-sm transition-colors"
