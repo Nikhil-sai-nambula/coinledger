@@ -346,8 +346,9 @@ export function createPlayerContributionTransaction(params: {
   roundId?: string
   notes?: string
   timestamp?: number
+  metadata?: Record<string, unknown>
 }): Transaction {
-  const { playerId, playerName, amountPaise, roundId, notes, timestamp = Date.now() } = params
+  const { playerId, playerName, amountPaise, roundId, notes, timestamp = Date.now(), metadata } = params
   assertPaiseInteger(amountPaise, 'Player contribution')
   if (amountPaise <= 0) throw new AccountingError('Contribution amount must be greater than zero')
 
@@ -383,6 +384,7 @@ export function createPlayerContributionTransaction(params: {
     description: `${playerName || 'Player'} contributed ₹${(amountPaise / 100).toFixed(2)} to Board`,
     notes,
     entries,
+    ...(metadata ? { metadata } : {}),
   }
 }
 
@@ -400,8 +402,9 @@ export function createBoardPayoutTransaction(params: {
   roundId?: string
   notes?: string
   timestamp?: number
+  metadata?: Record<string, unknown>
 }): Transaction {
-  const { playerId, playerName, amountPaise, roundId, notes, timestamp = Date.now() } = params
+  const { playerId, playerName, amountPaise, roundId, notes, timestamp = Date.now(), metadata } = params
   assertPaiseInteger(amountPaise, 'Board payout')
   if (amountPaise <= 0) throw new AccountingError('Payout amount must be greater than zero')
 
@@ -437,6 +440,7 @@ export function createBoardPayoutTransaction(params: {
     description: `Board paid ₹${(amountPaise / 100).toFixed(2)} to ${playerName || 'Player'}`,
     notes,
     entries,
+    ...(metadata ? { metadata } : {}),
   }
 }
 
