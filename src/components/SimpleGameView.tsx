@@ -611,7 +611,7 @@ export const SimpleGameView: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 lg:mt-4 lg:pt-3 border-t border-black/15 flex items-center justify-between text-xs font-mono font-bold text-black">
+          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 lg:mt-4 lg:pt-3 border-t border-black/15 flex items-center justify-between text-xs font-mono font-semibold text-black/80">
             <span>{activeRound ? `Round #${currentRoundNum} Active` : 'Game Settled'}</span>
             <span>
               {activeCount} {activeCount === 1 ? 'Player' : 'Players'} Active
@@ -728,9 +728,14 @@ export const SimpleGameView: React.FC = () => {
                 Declare Bet Against Board
               </h2>
             </div>
-            <span className="text-xs font-mono font-black text-[#194220]">
-              Pot: {formatPaise(boardBalancePaise)}
-            </span>
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-[#B6EA84] border-2 border-black px-3 py-1.5 shadow-sm shrink-0" aria-label={`Current pot: ${formatPaise(boardBalancePaise)}`}>
+              <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase text-black/70">
+                Current Pot
+              </span>
+              <span className="text-sm sm:text-base font-mono font-black text-black">
+                {formatPaise(boardBalancePaise)}
+              </span>
+            </div>
           </div>
 
           {/* Game Settled Notification Banner */}
