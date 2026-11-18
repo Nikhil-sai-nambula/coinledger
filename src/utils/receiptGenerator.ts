@@ -50,7 +50,8 @@ export async function generateSettlementPngBlob(data: ReceiptData): Promise<Blob
 
   // Calculate dynamic height
   const headerHeight = 170
-  const transfersCardHeight = transfers.length === 0 ? 110 : 80 + transfers.length * 64 + 20
+  const showPotWarning = boardBalancePaise > 0
+  const transfersCardHeight = transfers.length === 0 ? 110 : 80 + transfers.length * 64 + 20 + (showPotWarning ? 40 : 0)
   const leaderboardCardHeight = 85 + 36 + players.length * 48 + 24
   const footerHeight = 80
   const totalHeight = padding + headerHeight + 24 + transfersCardHeight + 24 + leaderboardCardHeight + 24 + footerHeight + padding
@@ -293,6 +294,12 @@ export async function generateSettlementPngBlob(data: ReceiptData): Promise<Blob
 
       transferRowY += 64
     })
+
+    if (showPotWarning) {
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillStyle = '#8A5A00'
+      ctx.fillText(`⚠ Board pot still holds ${formatPaise(boardBalancePaise)}. Distribute it in the app to finalize who pays whom.`, card1X + 28, transferRowY + 16)
+    }
   }
 
   currentY += transfersCardHeight + 24
