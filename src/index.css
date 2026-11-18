@@ -133,3 +133,38 @@ div.cta-arrow-btn {
 ::-webkit-scrollbar-thumb:hover {
   background: #000000;
 }
+
+/* Desktop (lg+) refinement: lighter borders and shadows, calmer cards.
+   Mobile styling above is untouched. */
+@media (min-width: 1024px) {
+  .cl-card-pot,
+  .bento-card-green {
+    border-color: rgba(0, 0, 0, 0.75);
+    box-shadow: -3px 3px 10px rgba(25, 25, 44, 0.06);
+  }
+  .cl-card-pot:hover,
+  .bento-card-green:hover {
+    transform: none;
+    box-shadow: -3px 3px 10px rgba(25, 25, 44, 0.06);
+  }
+
+  .cl-card-dark,
+  .bento-card-dark {
+    border-color: rgba(0, 0, 0, 0.75);
+    box-shadow: -3px 3px 10px rgba(25, 25, 44, 0.08);
+  }
+  .cl-card-dark:hover,
+  .bento-card-dark:hover {
+    box-shadow: -3px 3px 10px rgba(25, 25, 44, 0.08);
+  }
+
+  .cl-card-charcoal,
+  .bento-card-white {
+    border-color: #E2E2E2;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.03);
+  }
+  .cl-card-charcoal:hover,
+  .bento-card-white:hover {
+    border-color: #C9C9C9;
+  }
+}
