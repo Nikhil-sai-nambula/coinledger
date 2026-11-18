@@ -447,9 +447,9 @@ export const SimpleGameView: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-5 lg:space-y-6 max-w-6xl mx-auto pb-8">
 
-      {/* First-run Welcome Strip */}
+      {/* First-run Welcome Strip (mobile/tablet card) */}
       {showWelcome && (
-        <div className="p-4 sm:p-5 rounded-[16px] bg-white border-2 border-black space-y-3 shadow-sm lg:max-w-3xl lg:mx-auto">
+        <div className="p-4 sm:p-5 rounded-[16px] bg-white border-2 border-black space-y-3 shadow-sm lg:hidden">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-[8px] bg-[#B6EA84] border border-black flex items-center justify-center shrink-0">
@@ -503,6 +503,52 @@ export const SimpleGameView: React.FC = () => {
               className="px-3.5 py-1.5 rounded-full text-xs font-black bg-[#B6EA84] hover:bg-[#a5db71] text-black border border-black cursor-pointer shadow-sm transition-colors"
             >
               Got it, I'll set up
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* First-run Welcome Bar (desktop: slim single-row intro) */}
+      {showWelcome && (
+        <div className="hidden lg:flex items-center gap-4 px-4 py-3 rounded-[14px] bg-white border border-[#D8D8D8] shadow-sm">
+          <div className="w-8 h-8 rounded-[8px] bg-[#B6EA84] border border-black flex items-center justify-center shrink-0">
+            <Sparkles size={16} className="text-black" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-sm font-black text-black">New here? Start a game</span>
+            <div className="flex items-center gap-1.5 text-xs text-[#616161] mt-0.5 flex-wrap">
+              <span><strong className="text-black font-bold">1.</strong> Set players & board fee</span>
+              <ArrowRight size={12} className="text-[#194220] shrink-0" />
+              <span><strong className="text-black font-bold">2.</strong> Record each bet WON or LOST</span>
+              <ArrowRight size={12} className="text-[#194220] shrink-0" />
+              <span><strong className="text-black font-bold">3.</strong> Complete Game & Settle</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-auto shrink-0">
+            <button
+              type="button"
+              onClick={loadDemoGame}
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#F8F8F8] hover:bg-black hover:text-white text-black border border-[#D8D8D8] hover:border-black transition-all cursor-pointer"
+            >
+              See a sample game
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWelcomeDismissed(true)
+                scrollToSetup()
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-[#B6EA84] hover:bg-[#a5db71] text-black border border-black cursor-pointer shadow-sm transition-colors"
+            >
+              Set up players & fee
+            </button>
+            <button
+              type="button"
+              onClick={() => setWelcomeDismissed(true)}
+              aria-label="Dismiss welcome"
+              className="p-1.5 rounded-full text-[#616161] hover:text-black hover:bg-[#F0F0F0] cursor-pointer transition-colors"
+            >
+              <X size={14} />
             </button>
           </div>
         </div>
