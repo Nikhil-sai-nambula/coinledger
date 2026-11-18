@@ -374,6 +374,9 @@ export const SimpleGameView: React.FC = () => {
         const toP = players.find(p => p.id === t.toPlayerId)?.name || 'Player'
         lines.push(`${i + 1}. ${fromP} pays ${toP}: ${formatPaise(t.amountPaise)}`)
       })
+      if (boardBalancePaise > 0) {
+        lines.push('', `⚠️ Board pot still holds ${formatPaise(boardBalancePaise)} - distribute it in the app to finalize who pays whom.`)
+      }
     } else if (boardBalancePaise > 0) {
       lines.push('', `⚠️ Board pot still holds ${formatPaise(boardBalancePaise)} - distribute it in the app to compute who pays whom.`)
     } else if (Object.values(playerSummaries).some(s => (s?.netPositionPaise || 0) !== 0)) {
