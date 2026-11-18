@@ -428,7 +428,14 @@ export const SimpleGameView: React.FC = () => {
   const setupSectionRef = React.useRef<HTMLDivElement>(null)
   const scrollToSetup = () => {
     setSetupOpen(true)
-    setupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // The welcome strip unmounts on the same click and shifts layout up, so
+    // wait two frames for settled layout before scrolling; scroll-mt on the
+    // section keeps Players clear of the sticky header.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        setupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      )
+    )
   }
 
   // Medal ranks only make sense once a real bet has been recorded anywhere.
@@ -910,7 +917,7 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* Board Fee & Table Setup */}
-        <div ref={setupSectionRef} className={`lg:col-span-5 space-y-4 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
+        <div ref={setupSectionRef} className={`lg:col-span-5 space-y-4 scroll-mt-20 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
 
           {/* Mobile: Game setup accordion toggle (desktop always shows everything below) */}
           <button
