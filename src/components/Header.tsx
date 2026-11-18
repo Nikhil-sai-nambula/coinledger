@@ -74,7 +74,7 @@ export const Header: React.FC = () => {
               {/* Load Demo Button */}
               <button
                 onClick={loadDemoGame}
-                className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#F8F8F8] hover:bg-black hover:text-white text-black border border-[#D8D8D8] hover:border-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                className="px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-[#F8F8F8] hover:bg-black hover:text-white text-black border border-[#D8D8D8] hover:border-black transition-all flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm"
                 title="Load sample cards game with completed rounds"
               >
                 <Sparkles size={13} className="text-[#194220]" />
@@ -84,19 +84,21 @@ export const Header: React.FC = () => {
               {/* Help & Guide Button */}
               <button
                 onClick={() => setShowHelpModal(true)}
-                className="w-8 h-8 rounded-full bg-[#F8F8F8] border border-[#D8D8D8] text-[#616161] hover:text-black hover:border-black flex items-center justify-center transition-colors cursor-pointer"
+                className="px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-[#F8F8F8] hover:bg-black hover:text-white text-black border border-[#D8D8D8] hover:border-black transition-all flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm"
                 title="How to play & accounting rules"
               >
-                <HelpCircle size={15} />
+                <HelpCircle size={13} className="text-[#616161]" />
+                <span>Help</span>
               </button>
 
               {/* Reset Game Button */}
               <button
                 onClick={() => setShowResetConfirm(true)}
-                className="w-8 h-8 rounded-full bg-[#F8F8F8] border border-[#D8D8D8] text-[#616161] hover:text-[#EB5757] hover:border-[#EB5757] flex items-center justify-center transition-colors cursor-pointer"
+                className="px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-[#F8F8F8] hover:bg-[#EB5757] hover:text-white text-black border border-[#D8D8D8] hover:border-[#EB5757] transition-all flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-sm"
                 title="Reset game state"
               >
-                <RotateCcw size={15} />
+                <RotateCcw size={13} />
+                <span>Reset</span>
               </button>
             </div>
           </div>
@@ -222,6 +224,13 @@ export const Header: React.FC = () => {
             </div>
 
             <div className="space-y-3 text-xs text-[#404040] leading-relaxed">
+              <div className="p-3.5 rounded-[14px] bg-[#F3FBEA] border border-[#B6EA84] space-y-1">
+                <strong className="text-black block font-mono uppercase text-[11px]">Quick tour: the 3 tabs</strong>
+                <p className="text-[#616161]">• <strong className="text-black">PLAY DECK</strong>: record each bet as turns happen - pick the player, set the amount, then tap WON or LOST.</p>
+                <p className="text-[#616161]">• <strong className="text-black">ROUNDS TIMELINE</strong>: full history of every round, including cancelled ones.</p>
+                <p className="text-[#616161]">• <strong className="text-black">FINAL SETTLEMENT</strong>: end the game and see exactly who pays whom.</p>
+              </div>
+
               <div className="p-3.5 rounded-[14px] bg-[#F8F8F8] border border-[#D8D8D8] space-y-1">
                 <strong className="text-black block font-mono uppercase text-[11px]">1. Round Board Fee</strong>
                 <p className="text-[#616161]">Before cards are dealt, every active player contributes the agreed board fee (₹2, ₹5, ₹10, ₹50, etc.). The board pot begins with all fees combined.</p>
