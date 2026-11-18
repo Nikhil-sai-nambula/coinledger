@@ -422,6 +422,15 @@ export const SimpleGameView: React.FC = () => {
   const [welcomeDismissed, setWelcomeDismissed] = useState(false)
   const showWelcome = !startedWithSavedGame && !welcomeDismissed && !gameHasActivity && !isGameSettled
 
+  // Setup-first ordering: for a first-run visitor, Players & Board fee stay ahead
+  // of Declare Bet until real play begins - dismissing the welcome never hides setup.
+  const setupFirst = !startedWithSavedGame && !gameHasActivity && !isGameSettled
+  const setupSectionRef = React.useRef<HTMLDivElement>(null)
+  const scrollToSetup = () => {
+    setSetupOpen(true)
+    setupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   // Medal ranks only make sense once a real bet has been recorded anywhere.
   const anyBetRecorded = state.transactions.some(
     t => t.category === 'BOARD_PAYOUT' ||
@@ -480,7 +489,10 @@ export const SimpleGameView: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setWelcomeDismissed(true)}
+              onClick={() => {
+                setWelcomeDismissed(true)
+                scrollToSetup()
+              }}
               className="px-3.5 py-1.5 rounded-full text-xs font-black bg-[#B6EA84] hover:bg-[#a5db71] text-black border border-black cursor-pointer shadow-sm transition-colors"
             >
               Got it, I'll set up
@@ -624,7 +636,7 @@ export const SimpleGameView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* The Betting Deck */}
-        <div className={`lg:col-span-7 cl-card-charcoal bento-card-white p-4 sm:p-7 space-y-4 sm:space-y-5 ${showWelcome ? 'order-2 lg:order-1' : ''}`}>
+        <div className={`lg:col-span-7 cl-card-charcoal bento-card-white p-4 sm:p-7 space-y-4 sm:space-y-5 ${setupFirst ? 'order-2 lg:order-1' : ''}`}>
           <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-[8px] bg-[#B6EA84] text-black border border-black flex items-center justify-center font-black text-xs">
@@ -898,7 +910,7 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* Board Fee & Table Setup */}
-        <div className={`lg:col-span-5 space-y-4 ${showWelcome ? 'order-1 lg:order-2' : ''}`}>
+        <div ref={setupSectionRef} className={`lg:col-span-5 space-y-4 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
 
           {/* Mobile: Game setup accordion toggle (desktop always shows everything below) */}
           <button
@@ -908,7 +920,7 @@ export const SimpleGameView: React.FC = () => {
           >
             <span className="flex items-center gap-2 text-xs font-extrabold text-black">
               <Settings2 size={14} className="text-[#194220]" />
-              <span>{showWelcome ? 'Start here: players & board fee' : 'Game setup'}</span>
+              <span>{setupFirst ? 'Start here: players & board fee' : 'Game setup'}</span>
             </span>
             <span className="flex items-center gap-1.5 text-[11px] font-mono text-[#616161] font-bold">
               <span>{formatPaise(boardMoneyPaise)} / player &bull; {activeCount} players</span>
