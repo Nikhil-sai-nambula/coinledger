@@ -449,7 +449,7 @@ export const SimpleGameView: React.FC = () => {
 
       {/* First-run Welcome Strip */}
       {showWelcome && (
-        <div className="p-4 sm:p-5 rounded-[16px] bg-white border-2 border-black space-y-3 shadow-sm">
+        <div className="p-4 sm:p-5 rounded-[16px] bg-white border-2 border-black space-y-3 shadow-sm lg:max-w-3xl lg:mx-auto">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-[8px] bg-[#B6EA84] border border-black flex items-center justify-center shrink-0">
@@ -520,7 +520,7 @@ export const SimpleGameView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-5">
 
         {/* BentoML Signature Lime Hero Pot Tile */}
-        <div className="md:col-span-5 lg:col-span-4 cl-card-pot bento-card-green p-4 sm:p-7 lg:p-5 flex flex-col justify-between">
+        <div className="md:col-span-5 cl-card-pot bento-card-green p-4 sm:p-7 lg:p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-mono lg:font-sans tracking-widest uppercase font-black text-[#B6EA84] bg-black px-3 py-1 rounded-full">
@@ -557,7 +557,7 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* BentoML Signature Deep Forest Hero Headline & Actions Tile */}
-        <div className="md:col-span-7 lg:col-span-8 cl-card-dark bento-card-dark p-4 sm:p-7 lg:p-5 flex flex-col justify-between relative overflow-hidden">
+        <div className="md:col-span-7 cl-card-dark bento-card-dark p-4 sm:p-7 lg:p-5 flex flex-col justify-between relative overflow-hidden">
           <div className="space-y-2 relative z-10">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-mono lg:font-sans tracking-widest uppercase font-bold text-[#B6EA84] bg-[#B6EA84]/15 border border-[#B6EA84]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
@@ -632,7 +632,7 @@ export const SimpleGameView: React.FC = () => {
             </div>
           </div>
 
-          <p className="mt-3 text-[10px] sm:text-[11px] text-[#D0E6D6]/70 leading-relaxed relative z-10">
+          <p className="mt-3 text-[10px] sm:text-[11px] text-[#D0E6D6]/70 leading-relaxed relative z-10 lg:max-w-xl">
             <span className="font-bold text-[#D0E6D6]">Round actions:</span> Next Round ends this round early and carries the remaining pot over. Cancel Round voids this round's bets and restarts it - use it for the consecutive-numbers rule or a misdeal. Complete Game & Settle ends the session and shows who pays whom.
           </p>
         </div>
