@@ -445,11 +445,11 @@ export const SimpleGameView: React.FC = () => {
   )
 
   return (
-    <div className="space-y-4 sm:space-y-5 max-w-6xl mx-auto pb-8">
+    <div className="space-y-4 sm:space-y-5 lg:space-y-6 max-w-6xl mx-auto pb-8">
 
-      {/* First-run Welcome Strip */}
+      {/* First-run Welcome Strip (mobile/tablet card) */}
       {showWelcome && (
-        <div className="p-4 sm:p-5 rounded-[16px] bg-white border-2 border-black space-y-3 shadow-sm">
+        <div className="p-4 sm:p-5 rounded-[16px] bg-white border-2 border-black space-y-3 shadow-sm lg:hidden">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-[8px] bg-[#B6EA84] border border-black flex items-center justify-center shrink-0">
@@ -508,6 +508,52 @@ export const SimpleGameView: React.FC = () => {
         </div>
       )}
 
+      {/* First-run Welcome Bar (desktop: slim single-row intro) */}
+      {showWelcome && (
+        <div className="hidden lg:flex items-center gap-4 px-4 py-3 rounded-[14px] bg-white border border-[#D8D8D8] shadow-sm">
+          <div className="w-8 h-8 rounded-[8px] bg-[#B6EA84] border border-black flex items-center justify-center shrink-0">
+            <Sparkles size={16} className="text-black" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-sm font-black text-black">New here? Start a game</span>
+            <div className="flex items-center gap-1.5 text-xs text-[#616161] mt-0.5 flex-wrap">
+              <span><strong className="text-black font-bold">1.</strong> Set players & board fee</span>
+              <ArrowRight size={12} className="text-[#194220] shrink-0" />
+              <span><strong className="text-black font-bold">2.</strong> Record each bet WON or LOST</span>
+              <ArrowRight size={12} className="text-[#194220] shrink-0" />
+              <span><strong className="text-black font-bold">3.</strong> Complete Game & Settle</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-auto shrink-0">
+            <button
+              type="button"
+              onClick={loadDemoGame}
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#F8F8F8] hover:bg-black hover:text-white text-black border border-[#D8D8D8] hover:border-black transition-all cursor-pointer"
+            >
+              See a sample game
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWelcomeDismissed(true)
+                scrollToSetup()
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-[#B6EA84] hover:bg-[#a5db71] text-black border border-black cursor-pointer shadow-sm transition-colors"
+            >
+              Set up players & fee
+            </button>
+            <button
+              type="button"
+              onClick={() => setWelcomeDismissed(true)}
+              aria-label="Dismiss welcome"
+              className="p-1.5 rounded-full text-[#616161] hover:text-black hover:bg-[#F0F0F0] cursor-pointer transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Celebration Notification */}
       {celebrationMsg && (
         <div className="p-4 rounded-[16px] bg-[#D0E6D6] border-2 border-black text-[#194220] text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-md">
@@ -517,13 +563,13 @@ export const SimpleGameView: React.FC = () => {
       )}
 
       {/* HERO SECTION */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-5">
 
         {/* BentoML Signature Lime Hero Pot Tile */}
-        <div className="md:col-span-5 cl-card-pot bento-card-green p-4 sm:p-7 flex flex-col justify-between">
+        <div className="md:col-span-5 cl-card-pot bento-card-green p-4 sm:p-7 lg:p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono tracking-widest uppercase font-black text-[#B6EA84] bg-black px-3 py-1 rounded-full">
+              <span className="text-[11px] font-mono lg:font-sans tracking-widest uppercase font-black text-[#B6EA84] bg-black px-3 py-1 rounded-full">
                 BOARD POT
               </span>
               <button
@@ -538,16 +584,16 @@ export const SimpleGameView: React.FC = () => {
             </div>
 
             <div className="mt-4">
-              <span className="text-xs font-mono font-bold text-black/70 uppercase tracking-wider block">
+              <span className="text-xs font-mono lg:font-sans font-bold text-black/70 uppercase tracking-wider block">
                 Board Money Remaining
               </span>
-              <span className="text-3xl sm:text-5xl font-black font-mono tracking-tight text-black block mt-1">
+              <span className="text-3xl sm:text-5xl lg:text-4xl font-black font-mono tracking-tight text-black block mt-1">
                 {formatPaise(boardBalancePaise)}
               </span>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 border-t border-black/15 flex items-center justify-between text-xs font-mono font-bold text-black">
+          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 lg:mt-4 lg:pt-3 border-t border-black/15 flex items-center justify-between text-xs font-mono font-bold text-black">
             <span>{activeRound ? `Round #${currentRoundNum} Active` : 'Game Settled'}</span>
             <span>
               {activeCount} {activeCount === 1 ? 'Player' : 'Players'} Active
@@ -557,37 +603,37 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* BentoML Signature Deep Forest Hero Headline & Actions Tile */}
-        <div className="md:col-span-7 cl-card-dark bento-card-dark p-4 sm:p-7 flex flex-col justify-between relative overflow-hidden">
+        <div className="md:col-span-7 cl-card-dark bento-card-dark p-4 sm:p-7 lg:p-5 flex flex-col justify-between relative overflow-hidden">
           <div className="space-y-2 relative z-10">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-mono tracking-widest uppercase font-bold text-[#B6EA84] bg-[#B6EA84]/15 border border-[#B6EA84]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+              <span className="text-[10px] font-mono lg:font-sans tracking-widest uppercase font-bold text-[#B6EA84] bg-[#B6EA84]/15 border border-[#B6EA84]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#B6EA84] animate-pulse" />
                 CURRENT ROUND
               </span>
               <span className="text-xs text-[#D0E6D6]/80 font-mono">
                 {completedRoundsCount} {completedRoundsCount === 1 ? 'Round' : 'Rounds'} Completed
               </span>
-              <span className="hidden sm:inline-block text-[10px] font-mono text-[#194220] bg-[#B6EA84] px-2 py-0.5 rounded-full font-bold">
+              <span className="hidden sm:inline-block text-[10px] font-mono lg:font-sans text-[#194220] bg-[#B6EA84] px-2 py-0.5 rounded-full font-bold">
                 ⚡ Auto-advances when pot clears
               </span>
             </div>
 
-            <h1 className="hidden sm:block text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            <h1 className="hidden sm:block lg:hidden text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
               Board Pot <span className="text-[#B6EA84]">Without Complexity</span>
             </h1>
-            <p className="hidden sm:block text-xs sm:text-sm text-[#D0E6D6]/80 max-w-md leading-relaxed">
+            <p className="hidden sm:block lg:hidden text-xs sm:text-sm text-[#D0E6D6]/80 max-w-md leading-relaxed">
               When a round finishes, the new round starts automatically. Change board fee anytime to dynamically adjust the pot. Cancel current or previous rounds with 1 click.
             </p>
           </div>
 
           {/* DEDICATED CANCELLATION & ROUND CONTROLS */}
-          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5 relative z-10">
+          <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 lg:mt-5 lg:pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5 relative z-10">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Cancel Current Round Button */}
               <button
                 type="button"
                 onClick={() => setShowCancelCurrentModal(true)}
-                className="py-2.5 px-3.5 rounded-[12px] bg-[#EB5757]/15 hover:bg-[#EB5757]/25 active:scale-[0.98] border border-[#EB5757]/30 text-[#EB5757] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                className="py-2.5 px-3.5 rounded-[12px] bg-[#EB5757]/15 hover:bg-[#EB5757]/25 active:scale-[0.98] border border-[#EB5757]/30 text-[#EB5757] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer lg:py-2 lg:bg-[#EB5757]/10 lg:hover:bg-[#EB5757]/20"
                 title="Cancel current round & void all bets"
               >
                 <Ban size={14} className="text-[#EB5757]" />
@@ -599,7 +645,7 @@ export const SimpleGameView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCancelPrevModal(true)}
-                  className="py-2.5 px-3.5 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="py-2.5 px-3.5 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer lg:py-2 lg:bg-white/5"
                   title={`Cancel and void previous Round #${lastCompletedRound.roundNumber}`}
                 >
                   <RotateCcw size={14} className="text-[#D0E6D6]" />
@@ -613,7 +659,7 @@ export const SimpleGameView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleFinishRound}
-                className="py-2.5 px-3 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] text-white border border-white/20 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                className="py-2.5 px-3 rounded-[12px] bg-white/10 hover:bg-white/20 active:scale-[0.98] text-white border border-white/20 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer lg:font-black lg:border-white/40"
                 title="Roll over remaining pot early and start next round"
               >
                 <span>Next Round #{currentRoundNum + 1}</span>
@@ -632,7 +678,7 @@ export const SimpleGameView: React.FC = () => {
             </div>
           </div>
 
-          <p className="mt-3 text-[10px] sm:text-[11px] text-[#D0E6D6]/70 leading-relaxed relative z-10">
+          <p className="mt-3 text-[10px] sm:text-[11px] text-[#D0E6D6]/70 leading-relaxed relative z-10 lg:max-w-xl">
             <span className="font-bold text-[#D0E6D6]">Round actions:</span> Next Round ends this round early and carries the remaining pot over. Cancel Round voids this round's bets and restarts it - use it for the consecutive-numbers rule or a misdeal. Complete Game & Settle ends the session and shows who pays whom.
           </p>
         </div>
@@ -640,10 +686,10 @@ export const SimpleGameView: React.FC = () => {
       </div>
 
       {/* Core Gameplay Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
 
         {/* The Betting Deck */}
-        <div className={`lg:col-span-7 cl-card-charcoal bento-card-white p-4 sm:p-7 space-y-4 sm:space-y-5 ${setupFirst ? 'order-2 lg:order-1' : ''}`}>
+        <div className={`lg:col-span-8 cl-card-charcoal bento-card-white p-4 sm:p-7 lg:p-6 space-y-4 sm:space-y-5 ${setupFirst ? 'order-2 lg:order-1' : ''}`}>
           <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-[8px] bg-[#B6EA84] text-black border border-black flex items-center justify-center font-black text-xs">
@@ -714,7 +760,7 @@ export const SimpleGameView: React.FC = () => {
                       disabled={isBettingDisabled}
                       className={`p-3 rounded-[14px] border text-left transition-all cursor-pointer flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed ${
                         isSelected
-                          ? 'bg-[#152822] border-2 border-black text-white font-bold shadow-sm'
+                          ? 'bg-[#152822] border-2 border-black text-white font-bold shadow-sm lg:shadow-md lg:ring-2 lg:ring-[#B6EA84]/70'
                           : 'bg-[#F8F8F8] border-[#D8D8D8] text-[#404040] hover:text-black hover:border-black'
                       }`}
                     >
@@ -917,7 +963,7 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* Board Fee & Table Setup */}
-        <div ref={setupSectionRef} className={`lg:col-span-5 space-y-4 scroll-mt-28 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
+        <div ref={setupSectionRef} className={`lg:col-span-4 space-y-4 scroll-mt-28 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
 
           {/* Mobile: Game setup accordion toggle (desktop always shows everything below) */}
           <button
@@ -1170,7 +1216,7 @@ export const SimpleGameView: React.FC = () => {
                 <th className="py-2.5 px-3 text-center">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E5E5E5] font-mono">
+            <tbody className="divide-y divide-[#E5E5E5] font-mono tabular-nums">
               {[...players]
                 .sort((a, b) => {
                   const posA = playerSummaries[a.id]?.netPositionPaise || 0
@@ -1182,9 +1228,10 @@ export const SimpleGameView: React.FC = () => {
                   const net = s?.netPositionPaise || 0
                   const paid = s?.totalContributionsPaise || 0
                   const won = s?.totalPayoutsPaise || 0
+                  const isCurrentBet = p.id === bettingPlayerId
 
                   return (
-                    <tr key={p.id} className="hover:bg-[#F8F8F8] transition-colors">
+                    <tr key={p.id} className={`${isCurrentBet ? 'bg-[#F3FBEA] hover:bg-[#F3FBEA]' : 'hover:bg-[#F8F8F8]'} transition-colors`}>
                       <td className="py-2.5 px-3 font-sans font-bold text-black flex items-center gap-2">
                         <span className="text-[#888888] text-[10px] w-4">
                           {anyBetRecorded && idx === 0 ? '🥇' : anyBetRecorded && idx === 1 ? '🥈' : anyBetRecorded && idx === 2 ? '🥉' : `${idx + 1}.`}
