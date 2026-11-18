@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useGame } from '../context/GameContext'
 import { formatPaise, parseRupeesToPaise } from '../utils/money'
+import { isBetActivityTx, isLostBetTx, isBoardFeeTx } from '../utils/txKind'
 import {
   Users,
   Coins,
@@ -197,32 +198,29 @@ export const SimpleGameView: React.FC = () => {
   // When fee is changed in between, pot value is immediately updated!
   const handleSelectStakePreset = (rupees: number) => {
     setBetActionError(null)
-    try {
-      const paise = rupees * 100
-      setBoardMoneyPaise(paise)
-      setCustomStakeRupees(rupees.toString())
-      setCelebrationMsg(`💰 Round fee set to ₹${rupees}/player. Active pot updated in real-time!`)
-      setTimeout(() => setCelebrationMsg(null), 3500)
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setBetActionError(err.message)
-      }
+    const result = setBoardMoneyPaise(rupees * 100)
+    if (!result.ok) {
+      setBetActionError(result.reason || 'Cannot change the round fee right now')
+      setCustomStakeRupees((boardMoneyPaise / 100).toString())
+      return
     }
+    setCustomStakeRupees(rupees.toString())
+    setCelebrationMsg(`💰 Round fee set to ₹${rupees}/player. Active pot updated in real-time!`)
+    setTimeout(() => setCelebrationMsg(null), 3500)
   }
 
   const handleCustomStakeChange = (val: string) => {
-    setCustomStakeRupees(val)
     setBetActionError(null)
     const parsed = parseRupeesToPaise(val)
     if (parsed >= 0) {
-      try {
-        setBoardMoneyPaise(parsed)
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setBetActionError(err.message)
-        }
+      const result = setBoardMoneyPaise(parsed)
+      if (!result.ok) {
+        setBetActionError(result.reason || 'Cannot change the round fee right now')
+        setCustomStakeRupees((boardMoneyPaise / 100).toString())
+        return
       }
     }
+    setCustomStakeRupees(val)
   }
 
   // Handlers for Step 3: Betting Presets
@@ -376,6 +374,13 @@ export const SimpleGameView: React.FC = () => {
         const toP = players.find(p => p.id === t.toPlayerId)?.name || 'Player'
         lines.push(`${i + 1}. ${fromP} pays ${toP}: ${formatPaise(t.amountPaise)}`)
       })
+      if (boardBalancePaise > 0) {
+        lines.push('', `⚠️ Board pot still holds ${formatPaise(boardBalancePaise)} - distribute it in the app to finalize who pays whom.`)
+      }
+    } else if (boardBalancePaise > 0) {
+      lines.push('', `⚠️ Board pot still holds ${formatPaise(boardBalancePaise)} - distribute it in the app to compute who pays whom.`)
+    } else if (Object.values(playerSummaries).some(s => (s?.netPositionPaise || 0) !== 0)) {
+      lines.push('', '⚠️ Game still in progress - final payments are not computed yet.')
     } else {
       lines.push('', '✅ All accounts are fully settled!')
     }
@@ -394,19 +399,35 @@ export const SimpleGameView: React.FC = () => {
   // Undo is only offered for real declared bets (won payouts / lost-bet payments),
   // never for board-fee contributions.
   const hasUndoableBet = state.transactions.some(
-    t => t.roundId === activeRound?.id &&
-         (t.category === 'BOARD_PAYOUT' ||
-          (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
+    t => t.roundId === activeRound?.id && isBetActivityTx(t)
   )
+
+  // Settlement gating (user-confirmed rule): a round with recorded win/loss bets
+  // cannot be settled until those transactions are cancelled.
+  const currentRoundHasBets = state.transactions.some(
+    t => t.roundId === activeRound?.id && isBetActivityTx(t)
+  )
+
+  // Fresh-round fees that settling will refund (earlier balances and carried pot stay)
+  const currentRoundFeesPaise = activeRound
+    ? state.transactions
+        .filter(t => t.roundId === activeRound.id && isBoardFeeTx(t))
+        .reduce(
+          (sum, t) =>
+            sum +
+            t.entries
+              .filter(e => e.accountId === 'ACCOUNT_BOARD' && e.type === 'CREDIT')
+              .reduce((s, e) => s + e.amountPaise, 0),
+          0
+        )
+    : 0
 
   // Mobile: game setup accordion (board fee + player management) - expanded pre-game,
   // auto-collapses to a one-line summary once play begins; desktop always shows everything.
   // "Activity" means a real declared bet (won/lost), not the automatic board-fee
   // contributions every round starts with.
   const gameHasActivity = state.transactions.some(
-    t => t.roundId === activeRound?.id &&
-         (t.category === 'BOARD_PAYOUT' ||
-          (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
+    t => t.roundId === activeRound?.id && isBetActivityTx(t)
   ) || completedRoundsCount > 0
   const [setupOpen, setSetupOpen] = useState(!gameHasActivity)
   const setupAutoCollapsed = React.useRef(false)
@@ -439,10 +460,7 @@ export const SimpleGameView: React.FC = () => {
   }
 
   // Medal ranks only make sense once a real bet has been recorded anywhere.
-  const anyBetRecorded = state.transactions.some(
-    t => t.category === 'BOARD_PAYOUT' ||
-         (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet'))
-  )
+  const anyBetRecorded = state.transactions.some(t => isBetActivityTx(t))
 
   return (
     <div className="space-y-4 sm:space-y-5 lg:space-y-6 max-w-6xl mx-auto pb-8">
@@ -626,7 +644,8 @@ export const SimpleGameView: React.FC = () => {
             </p>
           </div>
 
-          {/* DEDICATED CANCELLATION & ROUND CONTROLS */}
+          {/* DEDICATED CANCELLATION & ROUND CONTROLS - hidden once the game is settled */}
+          {!isGameSettled && (
           <div className="mt-4 pt-3 sm:mt-6 sm:pt-4 lg:mt-5 lg:pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5 relative z-10">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Cancel Current Round Button */}
@@ -669,14 +688,24 @@ export const SimpleGameView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCompleteGameModal(true)}
-                className="py-2.5 px-3.5 rounded-[12px] bg-[#B6EA84] hover:bg-[#a5db71] active:scale-[0.98] text-black border border-black font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                title="Finish game, remove unplayed round pot, and view settlement"
+                disabled={currentRoundHasBets}
+                className="py-2.5 px-3.5 rounded-[12px] bg-[#B6EA84] hover:bg-[#a5db71] active:scale-[0.98] text-black border border-black font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#B6EA84]"
+                title={currentRoundHasBets
+                  ? `Round #${currentRoundNum} has recorded bets. Cancel this round's transactions first, then settling is enabled.`
+                  : 'Finish game, remove unplayed round pot, and view settlement'}
               >
                 <Coins size={14} />
                 <span>Complete Game & Settle</span>
               </button>
             </div>
           </div>
+          )}
+
+          {currentRoundHasBets && !isGameSettled && (
+            <p className="mt-2 text-[10px] sm:text-[11px] text-[#B6EA84]/90 leading-relaxed relative z-10 lg:max-w-xl">
+              Settling is blocked while Round #{currentRoundNum} has recorded bets. Cancel Round #{currentRoundNum} to void them - settling is enabled right after.
+            </p>
+          )}
 
           <p className="mt-3 text-[10px] sm:text-[11px] text-[#D0E6D6]/70 leading-relaxed relative z-10 lg:max-w-xl">
             <span className="font-bold text-[#D0E6D6]">Round actions:</span> Next Round ends this round early and carries the remaining pot over. Cancel Round voids this round's bets and restarts it - use it for the consecutive-numbers rule or a misdeal. Complete Game & Settle ends the session and shows who pays whom.
@@ -712,8 +741,12 @@ export const SimpleGameView: React.FC = () => {
                   <Check size={16} className="text-black stroke-[3]" />
                 </div>
                 <div>
-                  <strong className="text-xs font-black block">Game Completed & Settled (Pot ₹0)</strong>
-                  <span className="text-[11px] text-[#194220]">Unplayed pot refunded. Check Final Settlement for who owes whom.</span>
+                  <strong className="text-xs font-black block">Game Completed & Settled</strong>
+                  <span className="text-[11px] text-[#194220]">
+                    Unplayed round fees refunded.{boardBalancePaise > 0
+                      ? ` Board pot still holds ${formatPaise(boardBalancePaise)} - distribute it from Final Settlement.`
+                      : ' Check Final Settlement for who owes whom.'}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -933,7 +966,7 @@ export const SimpleGameView: React.FC = () => {
               <div className="space-y-1.5">
                 {recentBets.map(tx => {
                   const isWon = tx.category === 'BOARD_PAYOUT'
-                  const isFee = !isWon && !(tx.notes || '').toLowerCase().includes('lost bet')
+                  const isFee = !isWon && !isLostBetTx(tx)
                   const pEntry = tx.entries.find(e => e.accountId.startsWith('ACCOUNT_PLAYER_'))
                   const playerId = pEntry?.accountId.replace('ACCOUNT_PLAYER_', '')
                   const player = players.find(p => p.id === playerId)
@@ -1323,7 +1356,7 @@ export const SimpleGameView: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#444444] leading-relaxed">
-              This will wrap up the session, <strong>remove the unplayed Round #{currentRoundNum} pot automatically taken from everybody</strong>, and open the Final Settlement screen showing exactly who owes whom and how much to pay.
+              This will wrap up the session, <strong>refund the unplayed Round #{currentRoundNum} board fees to everybody</strong> (earlier rounds, balances and any carried-over pot stay exactly as they are), and open the Final Settlement screen showing exactly who owes whom and how much to pay.
             </p>
 
             <div className="p-3.5 rounded-[14px] bg-[#F8F8F8] border border-[#D8D8D8] text-xs space-y-1 font-mono text-[#616161]">
@@ -1332,8 +1365,8 @@ export const SimpleGameView: React.FC = () => {
                 <span className="text-black font-bold">{completedRoundsCount}</span>
               </div>
               <div className="flex justify-between">
-                <span>Unplayed Pot to Refund:</span>
-                <span className="text-[#194220] font-bold">{formatPaise(boardBalancePaise)}</span>
+                <span>Unplayed Round Fees to Refund:</span>
+                <span className="text-[#194220] font-bold">{formatPaise(currentRoundFeesPaise)}</span>
               </div>
             </div>
 
@@ -1348,8 +1381,13 @@ export const SimpleGameView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  const result = completeGameAndSettle()
+                  if (!result.settled) {
+                    setShowCompleteGameModal(false)
+                    setBetActionError(result.reason || 'This round cannot be settled yet')
+                    return
+                  }
                   setShowCompleteGameModal(false)
-                  completeGameAndSettle()
                 }}
                 className="px-4 py-2 rounded-full text-xs font-black bg-[#B6EA84] hover:bg-[#a5db71] text-black border border-black cursor-pointer shadow-sm"
               >

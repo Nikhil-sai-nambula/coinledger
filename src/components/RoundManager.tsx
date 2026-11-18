@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useGame } from '../context/GameContext'
 import { formatPaise } from '../utils/money'
+import { isBetActivityTx, isBoardFeeTx } from '../utils/txKind'
 import {
   Trophy,
   RotateCcw,
@@ -117,8 +118,8 @@ export const RoundManager: React.FC = () => {
             const isCancelled = round.status === 'CANCELLED'
             const isActive = round.status === 'ACTIVE'
             const roundTxs = state.transactions.filter(t => t.roundId === round.id)
-            const bets = roundTxs.filter(t => t.category === 'BOARD_PAYOUT' || (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
-            const anteTxs = roundTxs.filter(t => t.category === 'PLAYER_CONTRIBUTION' && !(t.notes || '').toLowerCase().includes('lost bet'))
+            const bets = roundTxs.filter(t => isBetActivityTx(t))
+            const anteTxs = roundTxs.filter(t => isBoardFeeTx(t))
 
             return (
               <div

@@ -25,6 +25,7 @@ import {
   calculatePlayerDetailedMovements,
   calculateAccountingOverview,
 } from '../core/ledger'
+import { TX_KIND, isBoardFeeTx, isLostBetTx, isBetActivityTx } from '../utils/txKind'
 import {
   evaluateSettlementPlan,
   createDistributeBoardFundsEquallyTransaction,
@@ -43,7 +44,7 @@ export interface GameContextType {
   completedRoundsCount: number
   lastCompletedRound: Round | undefined
   boardMoneyPaise: number
-  setBoardMoneyPaise: (paise: number) => void
+  setBoardMoneyPaise: (paise: number) => { ok: boolean; reason?: string }
   currentTab: 'play' | 'overview' | 'rounds' | 'settlement'
   setCurrentTab: (tab: 'play' | 'overview' | 'rounds' | 'settlement') => void
   addPlayer: (name: string) => { player: Player; feePaise: number }
@@ -86,7 +87,7 @@ export interface GameContextType {
   resolveBoardAllocation: (action: 'DISTRIBUTE_EQUAL' | 'REFUND_EXTERNAL' | 'HOST_RAKE' | 'CONFIRM_AS_IS') => void
   toggleSettlementTransfer: (transferId: string) => void
   settleAllAndCloseGame: () => void
-  completeGameAndSettle: () => void
+  completeGameAndSettle: () => { settled: boolean; reason?: string }
   resetGame: (newGameName?: string, defaultBoardMoneyPaise?: number) => void
   loadDemoGame: () => void
 }
@@ -160,6 +161,7 @@ function getInitialState(): GameState {
       amountPaise: roundFee,
       roundId: 'round_1',
       notes: 'Round 1 board fee',
+      metadata: { kind: TX_KIND.BOARD_FEE },
       timestamp: Date.now() + idx,
     })
   )
@@ -230,63 +232,76 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * If an active round is ongoing, every active player's round fee is updated,
    * instantly recalculating the table pot while preserving all existing bets.
    */
-  const setBoardMoneyPaise = (paise: number) => {
+  const setBoardMoneyPaise = (paise: number): { ok: boolean; reason?: string } => {
     const newFeePaise = Math.max(0, Math.round(paise))
 
-    setState(prev => {
-      const currentActive = prev.rounds.find(r => r.status === 'ACTIVE')
-      if (!currentActive) {
-        return {
-          ...prev,
-          boardMoneyPaise: newFeePaise,
-        }
-      }
+    const currentActive = state.rounds.find(r => r.status === 'ACTIVE')
 
+    if (currentActive) {
+      // Simulate the ante recreation first so an invalid change is reported, not silently ignored
       const activeRoundId = currentActive.id
-
-      // Separate ante transactions of active round from other transactions (bets, previous rounds)
-      const anteTxs = prev.transactions.filter(
-        t => t.roundId === activeRoundId && t.category === 'PLAYER_CONTRIBUTION' && t.notes?.includes('board fee')
+      const otherTxs = state.transactions.filter(
+        t => !(t.roundId === activeRoundId && isBoardFeeTx(t))
       )
-      const otherTxs = prev.transactions.filter(
-        t => !(t.roundId === activeRoundId && t.category === 'PLAYER_CONTRIBUTION' && t.notes?.includes('board fee'))
-      )
-
-      // Recreate ante contributions with newFeePaise for only active players
-      const activePlayers = prev.players.filter(p => p.isActive !== false)
-      const now = currentActive.createdAt || Date.now()
-      const updatedAnteTxs: Transaction[] = activePlayers.map((p, idx) =>
+      const activePlayers = state.players.filter(p => p.isActive !== false)
+      const projectedAntes = activePlayers.map(p =>
         createPlayerContributionTransaction({
           playerId: p.id,
           playerName: p.name,
           amountPaise: newFeePaise,
           roundId: activeRoundId,
           notes: `Round ${currentActive.roundNumber} board fee`,
-          timestamp: now + idx,
+          metadata: { kind: TX_KIND.BOARD_FEE },
         })
       )
-
-      const updatedTxs = [...updatedAnteTxs.reverse(), ...otherTxs]
-
-      // Verify that this adjustment does not cause a negative board balance (e.g. if payouts were already made)
-      const newBoardBal = calculateBoardBalance(updatedTxs.flatMap(t => t.entries))
-      if (newBoardBal < 0) {
-        console.warn(`Cannot reduce board fee to ₹${(newFeePaise / 100).toFixed(0)}: active round payouts exceed this fee.`)
-        return prev
-      }
-
-      const updatedRounds = prev.rounds.map(r =>
-        r.id === activeRoundId ? { ...r, boardMoneyPaise: newFeePaise } : r
+      const projectedBoardBal = calculateBoardBalance(
+        [...projectedAntes, ...otherTxs].flatMap(t => t.entries)
       )
-
-      return {
-        ...prev,
-        boardMoneyPaise: newFeePaise,
-        rounds: updatedRounds,
-        transactions: updatedTxs,
-        boardAllocationConfirmed: false,
+      if (projectedBoardBal < 0) {
+        return {
+          ok: false,
+          reason: `Cannot lower the round fee to ₹${(newFeePaise / 100).toFixed(0)}: players have already won more than that from this round's pot. Cancel this round's bets first.`,
+        }
       }
-    })
+
+      setState(prev => {
+        const prevActive = prev.rounds.find(r => r.status === 'ACTIVE')
+        if (!prevActive) {
+          return { ...prev, boardMoneyPaise: newFeePaise }
+        }
+        const prevOtherTxs = prev.transactions.filter(
+          t => !(t.roundId === prevActive.id && isBoardFeeTx(t))
+        )
+        const prevActivePlayers = prev.players.filter(p => p.isActive !== false)
+        const now = prevActive.createdAt || Date.now()
+        const updatedAnteTxs: Transaction[] = prevActivePlayers.map((p, idx) =>
+          createPlayerContributionTransaction({
+            playerId: p.id,
+            playerName: p.name,
+            amountPaise: newFeePaise,
+            roundId: prevActive.id,
+            notes: `Round ${prevActive.roundNumber} board fee`,
+            timestamp: now + idx,
+            metadata: { kind: TX_KIND.BOARD_FEE },
+          })
+        )
+        const updatedTxs = [...updatedAnteTxs.reverse(), ...prevOtherTxs]
+        const updatedRounds = prev.rounds.map(r =>
+          r.id === prevActive.id ? { ...r, boardMoneyPaise: newFeePaise } : r
+        )
+        return {
+          ...prev,
+          boardMoneyPaise: newFeePaise,
+          rounds: updatedRounds,
+          transactions: updatedTxs,
+          boardAllocationConfirmed: false,
+        }
+      })
+    } else {
+      setState(prev => ({ ...prev, boardMoneyPaise: newFeePaise }))
+    }
+
+    return { ok: true }
   }
 
   const updateGameName = (name: string) => {
@@ -325,6 +340,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             amountPaise: fee,
             roundId: currentActive.id,
             notes: `Round ${currentActive.roundNumber} board fee`,
+          metadata: { kind: TX_KIND.BOARD_FEE },
             timestamp: Date.now(),
           })
           newTxs = [feeTx, ...prev.transactions]
@@ -382,8 +398,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Check if this player has placed any bets in this round
           const hasBetInActiveRound = prev.transactions.some(
             t => t.roundId === currentActive.id &&
-                 (t.category === 'BOARD_PAYOUT' ||
-                  (t.category === 'PLAYER_CONTRIBUTION' && !t.notes?.includes('board fee'))) &&
+                 isBetActivityTx(t) &&
                  t.entries.some(e => e.accountId === getPlayerAccountId(playerId))
           )
 
@@ -392,8 +407,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Refund their board fee contribution for this active round and deduct from pot
             const feeTx = prev.transactions.find(
               t => t.roundId === currentActive.id &&
-                   t.category === 'PLAYER_CONTRIBUTION' &&
-                   t.notes?.includes('board fee') &&
+                   isBoardFeeTx(t) &&
                    t.entries.some(e => e.accountId === getPlayerAccountId(playerId))
             )
             if (feeTx) {
@@ -427,8 +441,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (currentActive) {
           const hasFeeTx = prev.transactions.some(
             t => t.roundId === currentActive.id &&
-                 t.category === 'PLAYER_CONTRIBUTION' &&
-                 t.notes?.includes('board fee') &&
+                 isBoardFeeTx(t) &&
                  t.entries.some(e => e.accountId === getPlayerAccountId(playerId))
           )
           if (!hasFeeTx) {
@@ -442,6 +455,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 amountPaise: fee,
                 roundId: currentActive.id,
                 notes: `Round ${currentActive.roundNumber} board fee`,
+          metadata: { kind: TX_KIND.BOARD_FEE },
                 timestamp: Date.now(),
               })
               newTxs = [feeTx, ...prev.transactions]
@@ -595,6 +609,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 amountPaise: boardMoneyPaise,
                 roundId: nextRoundId,
                 notes: `Round ${nextRoundNumber} board fee`,
+          metadata: { kind: TX_KIND.BOARD_FEE },
                 timestamp: now + 2 + i,
               })
             )
@@ -636,6 +651,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           amountPaise,
           roundId,
           notes: notes || `Won bet of ₹${(amountPaise / 100).toFixed(0)} from board`,
+          metadata: { kind: TX_KIND.BET_WIN },
           timestamp: now,
         })
         commitTransaction(tx)
@@ -653,6 +669,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         amountPaise,
         roundId,
         notes: notes || `Lost bet of ₹${(amountPaise / 100).toFixed(0)} paid to board`,
+        metadata: { kind: TX_KIND.BET_LOSS },
         timestamp: now,
       })
       commitTransaction(tx)
@@ -688,6 +705,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         amountPaise: fee,
         roundId,
         notes: `Round ${roundNum} board fee`,
+          metadata: { kind: TX_KIND.BOARD_FEE },
         timestamp: now,
       }))
     }
@@ -717,12 +735,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * starts next round, and collects new board fees automatically.
    */
   const finishRoundAndStartNext = (options?: { autoCollectNextAnte?: boolean }) => {
-    const currentActive = activeRound || {
-      id: `round_${completedRoundsCount + 1}_${Date.now()}`,
-      roundNumber: completedRoundsCount + 1,
-      status: 'ACTIVE' as const,
-      createdAt: Date.now(),
-    }
+    // Guard: with no active round (game settled) there is nothing to finish.
+    // The previous fallback fabricated a phantom COMPLETED round with no transactions.
+    if (!activeRound) return
+
+    const currentActive = activeRound
 
     const nextRoundNumber = currentActive.roundNumber + 1
     const nextRoundId = `round_${nextRoundNumber}_${Date.now()}`
@@ -757,6 +774,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           amountPaise: boardMoneyPaise,
           roundId: nextRoundId,
           notes: `Round ${nextRoundNumber} board fee`,
+          metadata: { kind: TX_KIND.BOARD_FEE },
           timestamp: now + 1,
         }))
       }
@@ -790,9 +808,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Find the most recent bet transaction in the current active round
     const betTx = state.transactions.find(
-      t => t.roundId === currentActive.id &&
-           (t.category === 'BOARD_PAYOUT' ||
-            (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
+      t => t.roundId === currentActive.id && isBetActivityTx(t)
     )
 
     if (!betTx) {
@@ -873,6 +889,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             amountPaise: boardMoneyPaise,
             roundId: freshRoundId,
             notes: `Round ${roundNum} board fee`,
+          metadata: { kind: TX_KIND.BOARD_FEE },
             timestamp: Date.now() + i,
           })
         )
@@ -1083,19 +1100,57 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const createRound = (name?: string, notes?: string) => {
-    const nextNumber = state.rounds.length + 1
+    // Number after the highest existing round so cancellations/replays never collide
+    const nextNumber = state.rounds.reduce((max, r) => Math.max(max, r.roundNumber), 0) + 1
+    const newRoundId = `round_${nextNumber}_${Date.now()}`
+    const now = Date.now()
+    const activePlayers = state.players.filter(p => p.isActive !== false)
     const newRound: Round = {
-      id: `round_${nextNumber}_${Date.now()}`,
+      id: newRoundId,
       roundNumber: nextNumber,
       name: name || `Round ${nextNumber}`,
       notes,
       status: 'ACTIVE',
-      createdAt: Date.now(),
+      createdAt: now,
+      boardMoneyPaise,
+      participatingPlayerIds: activePlayers.map(p => p.id),
     }
-    setState(prev => ({
-      ...prev,
-      rounds: [...prev.rounds.map(r => ({ ...r, status: 'COMPLETED' as const })), newRound],
-    }))
+
+    // Collect the board fee for the new round so it starts funded and playable
+    const anteTxs: Transaction[] = []
+    if (boardMoneyPaise > 0 && activePlayers.length > 0) {
+      for (const p of activePlayers) {
+        anteTxs.push(createPlayerContributionTransaction({
+          playerId: p.id,
+          playerName: p.name,
+          amountPaise: boardMoneyPaise,
+          roundId: newRoundId,
+          notes: `Round ${nextNumber} board fee`,
+          timestamp: now,
+          metadata: { kind: TX_KIND.BOARD_FEE },
+        }))
+      }
+    }
+
+    setState(prev => {
+      let currentTxs = [...prev.transactions]
+      for (const tx of anteTxs) {
+        assertCanApplyTransaction(currentTxs, tx)
+        currentTxs = [tx, ...currentTxs]
+      }
+      return {
+        ...prev,
+        // Only an ACTIVE round becomes COMPLETED; CANCELLED history stays cancelled
+        rounds: [
+          ...prev.rounds.map(r =>
+            r.status === 'ACTIVE' ? { ...r, status: 'COMPLETED' as const, completedAt: now } : r
+          ),
+          newRound,
+        ],
+        transactions: currentTxs,
+        boardAllocationConfirmed: false,
+      }
+    })
   }
 
   const completeRound = (roundId: string) => {
@@ -1331,32 +1386,35 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * leaves completed rounds intact, confirms board allocation, and navigates straight to
    * Final Settlement to display who pays whom.
    */
-  const completeGameAndSettle = () => {
+  const completeGameAndSettle = (): { settled: boolean; reason?: string } => {
+    const activeRound = state.rounds.find(r => r.status === 'ACTIVE')
+
+    if (activeRound) {
+      // Rule confirmed by the user: a round that has recorded any win/loss cannot be
+      // settled. Those transactions must be cancelled first (Cancel Round), which
+      // refunds them; settling is then enabled for the fresh round.
+      const hasBetActivity = state.transactions.some(
+        t => t.roundId === activeRound.id && isBetActivityTx(t)
+      )
+      if (hasBetActivity) {
+        return {
+          settled: false,
+          reason: `Round #${activeRound.roundNumber} already has recorded bets, so it cannot be settled. Use Cancel Round to void this round's transactions first - settling is enabled right after.`,
+        }
+      }
+    }
+
     setState(prev => {
-      const activeRound = prev.rounds.find(r => r.status === 'ACTIVE')
+      const prevActive = prev.rounds.find(r => r.status === 'ACTIVE')
       let newTxs = prev.transactions
       let newRounds = prev.rounds
 
-      if (activeRound) {
-        // Check if activeRound had any actual bets placed (BOARD_PAYOUT or bet loss)
-        const hasBetActivity = prev.transactions.some(
-          t => t.roundId === activeRound.id &&
-               (t.category === 'BOARD_PAYOUT' ||
-                (t.category === 'PLAYER_CONTRIBUTION' && !t.notes?.includes('board fee')))
-        )
-
-        if (!hasBetActivity) {
-          // No bets were placed: void unplayed round fees so players are not charged
-          newTxs = prev.transactions.filter(t => t.roundId !== activeRound.id)
-          newRounds = prev.rounds.filter(r => r.id !== activeRound.id)
-        } else {
-          // Bets were placed: keep round & transactions, and mark round as COMPLETED!
-          newRounds = prev.rounds.map(r =>
-            r.id === activeRound.id
-              ? { ...r, status: 'COMPLETED' as const, completedAt: Date.now() }
-              : r
-          )
-        }
+      if (prevActive) {
+        // Fresh round with no bets: cancel this round's fee contributions so players
+        // are not charged for an unplayed round. Earlier rounds, player balances and
+        // any carried-over pot stay exactly as they are.
+        newTxs = prev.transactions.filter(t => t.roundId !== prevActive.id)
+        newRounds = prev.rounds.filter(r => r.id !== prevActive.id)
       }
 
       return {
@@ -1367,6 +1425,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     })
     setCurrentTab('settlement')
+    return { settled: true }
   }
 
   const resetGame = (newGameName?: string, defaultBoardMoneyPaise?: number) => {
@@ -1395,6 +1454,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         amountPaise: fee,
         roundId: 'round_1',
         notes: 'Round 1 board fee',
+      metadata: { kind: TX_KIND.BOARD_FEE },
         timestamp: Date.now() + idx,
       })
     )
@@ -1466,23 +1526,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Round 1 Ante
     for (const p of players) {
-      txs.push(createPlayerContributionTransaction({ playerId: p.id, playerName: p.name, amountPaise: fee, roundId: 'demo_r1', timestamp: t++ }))
+      txs.push(createPlayerContributionTransaction({ playerId: p.id, playerName: p.name, amountPaise: fee, roundId: 'demo_r1', notes: 'Round 1 board fee', timestamp: t++, metadata: { kind: TX_KIND.BOARD_FEE } }))
     }
     // Bunny bets ₹200 and WINS
-    txs.push(createBoardPayoutTransaction({ playerId: 'p2', playerName: 'Bunny', amountPaise: 20000, roundId: 'demo_r1', notes: 'Won bet of ₹200 from board', timestamp: t++ }))
+    txs.push(createBoardPayoutTransaction({ playerId: 'p2', playerName: 'Bunny', amountPaise: 20000, roundId: 'demo_r1', notes: 'Won bet of ₹200 from board', timestamp: t++, metadata: { kind: TX_KIND.BET_WIN } }))
 
     // Round 2 Ante
     for (const p of players) {
-      txs.push(createPlayerContributionTransaction({ playerId: p.id, playerName: p.name, amountPaise: fee, roundId: 'demo_r2', timestamp: t++ }))
+      txs.push(createPlayerContributionTransaction({ playerId: p.id, playerName: p.name, amountPaise: fee, roundId: 'demo_r2', notes: 'Round 2 board fee', timestamp: t++, metadata: { kind: TX_KIND.BOARD_FEE } }))
     }
     // Sunny bets ₹300 and WINS
-    txs.push(createBoardPayoutTransaction({ playerId: 'p1', playerName: 'Sunny', amountPaise: 30000, roundId: 'demo_r2', notes: 'Won bet of ₹300 from board', timestamp: t++ }))
+    txs.push(createBoardPayoutTransaction({ playerId: 'p1', playerName: 'Sunny', amountPaise: 30000, roundId: 'demo_r2', notes: 'Won bet of ₹300 from board', timestamp: t++, metadata: { kind: TX_KIND.BET_WIN } }))
     // Spanny bets ₹150 and LOSES
-    txs.push(createPlayerContributionTransaction({ playerId: 'p4', playerName: 'Spanny', amountPaise: 15000, roundId: 'demo_r2', notes: 'Lost bet of ₹150 paid to board', timestamp: t++ }))
+    txs.push(createPlayerContributionTransaction({ playerId: 'p4', playerName: 'Spanny', amountPaise: 15000, roundId: 'demo_r2', notes: 'Lost bet of ₹150 paid to board', timestamp: t++, metadata: { kind: TX_KIND.BET_LOSS } }))
 
     // Round 3 Ante (Active round)
     for (const p of players) {
-      txs.push(createPlayerContributionTransaction({ playerId: p.id, playerName: p.name, amountPaise: fee, roundId: 'demo_r3', timestamp: t++ }))
+      txs.push(createPlayerContributionTransaction({ playerId: p.id, playerName: p.name, amountPaise: fee, roundId: 'demo_r3', notes: 'Round 3 board fee', timestamp: t++, metadata: { kind: TX_KIND.BOARD_FEE } }))
     }
 
     setState({

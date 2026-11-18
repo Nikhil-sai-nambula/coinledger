@@ -5,6 +5,7 @@ export interface ReceiptData {
   gameName: string
   completedRoundsCount: number
   boardMoneyPaise: number
+  boardBalancePaise: number
   players: Player[]
   playerSummaries: Record<string, PlayerBalanceSummary>
   transfers: SettlementTransfer[]
@@ -37,6 +38,7 @@ export async function generateSettlementPngBlob(data: ReceiptData): Promise<Blob
   const {
     completedRoundsCount,
     boardMoneyPaise,
+    boardBalancePaise,
     players,
     playerSummaries,
     transfers,
@@ -48,7 +50,8 @@ export async function generateSettlementPngBlob(data: ReceiptData): Promise<Blob
 
   // Calculate dynamic height
   const headerHeight = 170
-  const transfersCardHeight = transfers.length === 0 ? 110 : 80 + transfers.length * 64 + 20
+  const showPotWarning = boardBalancePaise > 0
+  const transfersCardHeight = transfers.length === 0 ? 110 : 80 + transfers.length * 64 + 20 + (showPotWarning ? 40 : 0)
   const leaderboardCardHeight = 85 + 36 + players.length * 48 + 24
   const footerHeight = 80
   const totalHeight = padding + headerHeight + 24 + transfersCardHeight + 24 + leaderboardCardHeight + 24 + footerHeight + padding
@@ -183,9 +186,18 @@ export async function generateSettlementPngBlob(data: ReceiptData): Promise<Blob
   let transferRowY = card1Y + 70
 
   if (transfers.length === 0) {
+    const anyOutstanding = players.some(p => (playerSummaries[p.id]?.netPositionPaise || 0) !== 0)
     ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillStyle = '#194220'
-    ctx.fillText('✅ All player accounts are completely settled (₹0.00). No transfers needed!', card1X + 28, transferRowY + 16)
+    if (boardBalancePaise > 0) {
+      ctx.fillStyle = '#8A5A00'
+      ctx.fillText(`⚠ Board pot still holds ${formatPaise(boardBalancePaise)}. Distribute it in the app to finalize who pays whom.`, card1X + 28, transferRowY + 16)
+    } else if (anyOutstanding) {
+      ctx.fillStyle = '#8A5A00'
+      ctx.fillText('⚠ Player balances are still outstanding. See the scorecard below for who owes what.', card1X + 28, transferRowY + 16)
+    } else {
+      ctx.fillStyle = '#194220'
+      ctx.fillText('✅ All player accounts are completely settled (₹0.00). No transfers needed!', card1X + 28, transferRowY + 16)
+    }
   } else {
     transfers.forEach((t, i) => {
       const fromP = players.find(p => p.id === t.fromPlayerId)
@@ -282,6 +294,12 @@ export async function generateSettlementPngBlob(data: ReceiptData): Promise<Blob
 
       transferRowY += 64
     })
+
+    if (showPotWarning) {
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillStyle = '#8A5A00'
+      ctx.fillText(`⚠ Board pot still holds ${formatPaise(boardBalancePaise)}. Distribute it in the app to finalize who pays whom.`, card1X + 28, transferRowY + 16)
+    }
   }
 
   currentY += transfersCardHeight + 24
