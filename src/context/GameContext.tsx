@@ -33,6 +33,7 @@ import {
 
 export interface GameContextType {
   state: GameState
+  startedWithSavedGame: boolean
   overview: AccountingOverviewData
   playerSummaries: Record<string, PlayerBalanceSummary>
   boardBalancePaise: number
@@ -103,6 +104,17 @@ export const AVATAR_COLORS = [
   '#e11d48', // rose
 ]
 
+function hasSavedGameState(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return false
+    const parsed = JSON.parse(raw)
+    return !!(parsed && Array.isArray(parsed.players) && Array.isArray(parsed.transactions))
+  } catch {
+    return false
+  }
+}
+
 function getInitialState(): GameState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -170,14 +182,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, setState] = useState<GameState>(getInitialState)
   const [currentTab, setCurrentTab] = useState<'play' | 'overview' | 'rounds' | 'settlement'>('play')
 
+  // Whether this visit found a previously saved game in localStorage. Captured
+  // once at mount, before the persist effect below can write anything.
+  const startedWithSavedGame = React.useRef(hasSavedGameState()).current
+  const pristineDefaultRef = React.useRef(state)
+
   // Persist state to localStorage on every update
   useEffect(() => {
     try {
+      // A brand-new visitor's untouched default game is not a saved game: don't
+      // write it, so a later visit with no interaction still counts as first-run.
+      if (!startedWithSavedGame && state === pristineDefaultRef.current) return
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     } catch (err) {
       console.warn('Failed to save to localStorage', err)
     }
-  }, [state])
+  }, [state, startedWithSavedGame])
 
   // Computed Accounting Metrics derived strictly from Ledger Entries
   const overview = calculateAccountingOverview(state.transactions, state.players)
@@ -1481,6 +1501,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <GameContext.Provider
       value={{
         state,
+        startedWithSavedGame,
         overview,
         playerSummaries,
         boardBalancePaise,

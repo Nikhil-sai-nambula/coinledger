@@ -29,7 +29,7 @@ export const CoinsLedgerLogo: React.FC<CoinsLedgerLogoProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="font-extrabold text-base tracking-tight text-black">
+        <span className="font-extrabold text-sm sm:text-base tracking-tight text-black whitespace-nowrap">
           Coins <span className="text-[#194220]">Ledger</span>
         </span>
       </div>

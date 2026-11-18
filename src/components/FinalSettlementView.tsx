@@ -72,7 +72,7 @@ export const FinalSettlementView: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono uppercase tracking-widest font-black text-black bg-[#B6EA84] px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-              MINIMUM TRANSFERS
+              SIMPLEST PAYMENTS
             </span>
             <span className="text-xs text-[#D0E6D6]/80 font-mono">Coins Ledger Cash Out</span>
           </div>

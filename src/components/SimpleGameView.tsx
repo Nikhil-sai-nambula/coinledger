@@ -31,6 +31,7 @@ import {
   ChevronDown,
   ChevronUp,
   Settings2,
+  X,
 } from 'lucide-react'
 
 // Coins Ledger Presets starting from ₹2, ₹5, ₹10, ₹20, ₹50, ₹100
@@ -39,6 +40,7 @@ const BOARD_FEE_PRESETS = [2, 5, 10, 20, 50, 100]
 export const SimpleGameView: React.FC = () => {
   const {
     state,
+    startedWithSavedGame,
     completedRounds,
     completedRoundsCount,
     lastCompletedRound,
@@ -62,6 +64,7 @@ export const SimpleGameView: React.FC = () => {
     activeRound,
     completeGameAndSettle,
     createRound,
+    loadDemoGame,
   } = useGame()
 
   // Step 1: Add player state
@@ -398,7 +401,13 @@ export const SimpleGameView: React.FC = () => {
 
   // Mobile: game setup accordion (board fee + player management) - expanded pre-game,
   // auto-collapses to a one-line summary once play begins; desktop always shows everything.
-  const gameHasActivity = recentBets.length > 0 || completedRoundsCount > 0
+  // "Activity" means a real declared bet (won/lost), not the automatic board-fee
+  // contributions every round starts with.
+  const gameHasActivity = state.transactions.some(
+    t => t.roundId === activeRound?.id &&
+         (t.category === 'BOARD_PAYOUT' ||
+          (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet')))
+  ) || completedRoundsCount > 0
   const [setupOpen, setSetupOpen] = useState(!gameHasActivity)
   const setupAutoCollapsed = React.useRef(false)
   React.useEffect(() => {
@@ -408,8 +417,96 @@ export const SimpleGameView: React.FC = () => {
     }
   }, [gameHasActivity])
 
+  // First-run welcome: only for a visitor who had no saved game and no real
+  // activity yet. Dismissible; also disappears by itself once play begins.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
+  const showWelcome = !startedWithSavedGame && !welcomeDismissed && !gameHasActivity && !isGameSettled
+
+  // Setup-first ordering: for a first-run visitor, Players & Board fee stay ahead
+  // of Declare Bet until real play begins - dismissing the welcome never hides setup.
+  const setupFirst = !startedWithSavedGame && !gameHasActivity && !isGameSettled
+  const setupSectionRef = React.useRef<HTMLDivElement>(null)
+  const scrollToSetup = () => {
+    setSetupOpen(true)
+    // The welcome strip unmounts on the same click and shifts layout up, so
+    // wait two frames for settled layout before scrolling; scroll-mt on the
+    // section keeps Players clear of the sticky header.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        setupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      )
+    )
+  }
+
+  // Medal ranks only make sense once a real bet has been recorded anywhere.
+  const anyBetRecorded = state.transactions.some(
+    t => t.category === 'BOARD_PAYOUT' ||
+         (t.category === 'PLAYER_CONTRIBUTION' && (t.notes || '').toLowerCase().includes('lost bet'))
+  )
+
   return (
     <div className="space-y-4 sm:space-y-5 max-w-6xl mx-auto pb-8">
+
+      {/* First-run Welcome Strip */}
+      {showWelcome && (
+        <div className="p-4 sm:p-5 rounded-[16px] bg-white border-2 border-black space-y-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-[8px] bg-[#B6EA84] border border-black flex items-center justify-center shrink-0">
+                <Sparkles size={16} className="text-black" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-black">New here? Start in 3 steps</h2>
+                <p className="text-xs text-[#616161]">
+                  Coins Ledger tracks your card game's board pot and works out who pays whom at the end.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setWelcomeDismissed(true)}
+              aria-label="Dismiss welcome"
+              className="p-1.5 rounded-full text-[#616161] hover:text-black hover:bg-[#F0F0F0] cursor-pointer transition-colors shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <ol className="text-xs text-[#404040] space-y-1.5 leading-relaxed">
+            <li>
+              <strong className="text-black">1.</strong> Replace the sample players with your group and set the board fee, in Game setup
+              <span className="lg:hidden"> below</span>
+              <span className="hidden lg:inline"> on the right</span> (it's open for you).
+            </li>
+            <li>
+              <strong className="text-black">2.</strong> As each turn happens, pick the player and amount under Declare Bet, then tap WON or LOST.
+            </li>
+            <li>
+              <strong className="text-black">3.</strong> When the game ends, tap Complete Game & Settle to see who pays whom.
+            </li>
+          </ol>
+
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <button
+              type="button"
+              onClick={loadDemoGame}
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#F8F8F8] hover:bg-black hover:text-white text-black border border-[#D8D8D8] hover:border-black transition-all cursor-pointer shadow-sm"
+            >
+              See a sample game
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWelcomeDismissed(true)
+                scrollToSetup()
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-black bg-[#B6EA84] hover:bg-[#a5db71] text-black border border-black cursor-pointer shadow-sm transition-colors"
+            >
+              Got it, I'll set up
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Celebration Notification */}
       {celebrationMsg && (
@@ -465,7 +562,7 @@ export const SimpleGameView: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-mono tracking-widest uppercase font-bold text-[#B6EA84] bg-[#B6EA84]/15 border border-[#B6EA84]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#B6EA84] animate-pulse" />
-                BOARD POT ENGINE
+                CURRENT ROUND
               </span>
               <span className="text-xs text-[#D0E6D6]/80 font-mono">
                 {completedRoundsCount} {completedRoundsCount === 1 ? 'Round' : 'Rounds'} Completed
@@ -534,6 +631,10 @@ export const SimpleGameView: React.FC = () => {
               </button>
             </div>
           </div>
+
+          <p className="mt-3 text-[10px] sm:text-[11px] text-[#D0E6D6]/70 leading-relaxed relative z-10">
+            <span className="font-bold text-[#D0E6D6]">Round actions:</span> Next Round ends this round early and carries the remaining pot over. Cancel Round voids this round's bets and restarts it - use it for the consecutive-numbers rule or a misdeal. Complete Game & Settle ends the session and shows who pays whom.
+          </p>
         </div>
 
       </div>
@@ -542,7 +643,7 @@ export const SimpleGameView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* The Betting Deck */}
-        <div className="lg:col-span-7 cl-card-charcoal bento-card-white p-4 sm:p-7 space-y-4 sm:space-y-5">
+        <div className={`lg:col-span-7 cl-card-charcoal bento-card-white p-4 sm:p-7 space-y-4 sm:space-y-5 ${setupFirst ? 'order-2 lg:order-1' : ''}`}>
           <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-[8px] bg-[#B6EA84] text-black border border-black flex items-center justify-center font-black text-xs">
@@ -731,8 +832,18 @@ export const SimpleGameView: React.FC = () => {
             </div>
           )}
 
+          {/* Substep C: Record the outcome */}
+          <div className="pt-1">
+            <label className="text-xs font-semibold text-[#616161] block">
+              C. Did they win or lose?
+            </label>
+            <p className="text-[11px] text-[#888888] mt-0.5">
+              Tap to record the result instantly. Made a mistake? Undo Last Bet appears below once a bet is recorded.
+            </p>
+          </div>
+
           {/* Substep C: Mobile-First Big Outcome Buttons */}
-          <div className="pt-2 grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => handleExecuteBet('WON')}
@@ -806,7 +917,7 @@ export const SimpleGameView: React.FC = () => {
         </div>
 
         {/* Board Fee & Table Setup */}
-        <div className="lg:col-span-5 space-y-4">
+        <div ref={setupSectionRef} className={`lg:col-span-5 space-y-4 scroll-mt-28 ${setupFirst ? 'order-1 lg:order-2' : ''}`}>
 
           {/* Mobile: Game setup accordion toggle (desktop always shows everything below) */}
           <button
@@ -816,7 +927,7 @@ export const SimpleGameView: React.FC = () => {
           >
             <span className="flex items-center gap-2 text-xs font-extrabold text-black">
               <Settings2 size={14} className="text-[#194220]" />
-              <span>Game setup</span>
+              <span>{setupFirst ? 'Start here: players & board fee' : 'Game setup'}</span>
             </span>
             <span className="flex items-center gap-1.5 text-[11px] font-mono text-[#616161] font-bold">
               <span>{formatPaise(boardMoneyPaise)} / player &bull; {activeCount} players</span>
@@ -825,64 +936,6 @@ export const SimpleGameView: React.FC = () => {
           </button>
 
           <div className={`${setupOpen ? 'space-y-4' : 'hidden'} lg:block lg:space-y-4`}>
-
-          {/* Board Fee Config Box */}
-          <div className="cl-card-charcoal bento-card-white p-6 space-y-4 bg-white border border-[#D8D8D8] rounded-[20px]">
-            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-[8px] bg-[#bdadeb] text-black border border-black flex items-center justify-center font-black text-xs">
-                  2
-                </div>
-                <h3 className="text-sm font-extrabold text-black">Board Fee / Round</h3>
-              </div>
-              <span className="text-xs font-mono font-black text-[#194220]">
-                {formatPaise(boardMoneyPaise)} / player
-              </span>
-            </div>
-
-            <p className="text-xs text-[#616161]">
-              Change fee anytime—active round Board Fee and board pot adjust dynamically:
-            </p>
-
-            {/* Presets starting from ₹2, ₹5, ₹10, ₹20, ₹50, ₹100 */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-              {BOARD_FEE_PRESETS.map((amount) => {
-                const isSelected = boardMoneyPaise === amount * 100
-                return (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => handleSelectStakePreset(amount)}
-                    className={`py-2 px-1 rounded-[12px] text-xs font-bold font-mono transition-all cursor-pointer text-center ${
-                      isSelected
-                        ? 'bg-[#B6EA84] text-black border border-black font-black shadow-sm scale-105'
-                        : 'bg-[#F8F8F8] border border-[#D8D8D8] text-[#404040] hover:border-black'
-                    }`}
-                  >
-                    ₹{amount}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Custom Input */}
-            <div className="flex items-center gap-2 pt-1">
-              <span className="text-xs text-[#616161] shrink-0">Custom:</span>
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888888] text-xs font-bold">
-                  ₹
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={customStakeRupees}
-                  onChange={e => handleCustomStakeChange(e.target.value)}
-                  className="w-full bg-[#F8F8F8] border border-[#D8D8D8] rounded-[12px] pl-6 pr-3 py-1.5 text-xs font-mono text-black focus:outline-none focus:border-black"
-                />
-              </div>
-            </div>
-          </div>
 
           {/* Players Box */}
           <div className="cl-card-charcoal bento-card-white p-6 space-y-4 bg-white border border-[#D8D8D8] rounded-[20px]">
@@ -1007,6 +1060,64 @@ export const SimpleGameView: React.FC = () => {
             </div>
           </div>
 
+          {/* Board Fee Config Box */}
+          <div className="cl-card-charcoal bento-card-white p-6 space-y-4 bg-white border border-[#D8D8D8] rounded-[20px]">
+            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-[8px] bg-[#bdadeb] text-black border border-black flex items-center justify-center font-black text-xs">
+                  2
+                </div>
+                <h3 className="text-sm font-extrabold text-black">Board Fee / Round</h3>
+              </div>
+              <span className="text-xs font-mono font-black text-[#194220]">
+                {formatPaise(boardMoneyPaise)} / player
+              </span>
+            </div>
+
+            <p className="text-xs text-[#616161]">
+              Change fee anytime—active round Board Fee and board pot adjust dynamically:
+            </p>
+
+            {/* Presets starting from ₹2, ₹5, ₹10, ₹20, ₹50, ₹100 */}
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              {BOARD_FEE_PRESETS.map((amount) => {
+                const isSelected = boardMoneyPaise === amount * 100
+                return (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => handleSelectStakePreset(amount)}
+                    className={`py-2 px-1 rounded-[12px] text-xs font-bold font-mono transition-all cursor-pointer text-center ${
+                      isSelected
+                        ? 'bg-[#B6EA84] text-black border border-black font-black shadow-sm scale-105'
+                        : 'bg-[#F8F8F8] border border-[#D8D8D8] text-[#404040] hover:border-black'
+                    }`}
+                  >
+                    ₹{amount}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Custom Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-[#616161] shrink-0">Custom:</span>
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888888] text-xs font-bold">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={customStakeRupees}
+                  onChange={e => handleCustomStakeChange(e.target.value)}
+                  className="w-full bg-[#F8F8F8] border border-[#D8D8D8] rounded-[12px] pl-6 pr-3 py-1.5 text-xs font-mono text-black focus:outline-none focus:border-black"
+                />
+              </div>
+            </div>
+          </div>
+
           </div>{/* end mobile setup accordion wrapper */}
 
         </div>
@@ -1076,7 +1187,7 @@ export const SimpleGameView: React.FC = () => {
                     <tr key={p.id} className="hover:bg-[#F8F8F8] transition-colors">
                       <td className="py-2.5 px-3 font-sans font-bold text-black flex items-center gap-2">
                         <span className="text-[#888888] text-[10px] w-4">
-                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}
+                          {anyBetRecorded && idx === 0 ? '🥇' : anyBetRecorded && idx === 1 ? '🥈' : anyBetRecorded && idx === 2 ? '🥉' : `${idx + 1}.`}
                         </span>
                         <div
                           className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-black bg-[#B6EA84] border border-black shrink-0"
@@ -1134,7 +1245,7 @@ export const SimpleGameView: React.FC = () => {
                 <div key={p.id} className="py-2.5 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-[#888888] text-[10px] w-4 shrink-0 font-mono">
-                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}
+                      {anyBetRecorded && idx === 0 ? '🥇' : anyBetRecorded && idx === 1 ? '🥈' : anyBetRecorded && idx === 2 ? '🥉' : `${idx + 1}.`}
                     </span>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-black bg-[#B6EA84] border border-black shrink-0">
                       {p.name.substring(0, 2).toUpperCase()}
