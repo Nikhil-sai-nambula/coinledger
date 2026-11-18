@@ -46,6 +46,7 @@ export const FinalSettlementView: React.FC = () => {
         gameName: state.gameName,
         completedRoundsCount,
         boardMoneyPaise,
+        boardBalancePaise,
         players,
         playerSummaries,
         transfers: settlementPlan.transfers,
