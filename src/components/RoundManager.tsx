@@ -43,7 +43,7 @@ export const RoundManager: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono tracking-widest uppercase font-black text-black bg-[#B6EA84] px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-              TIMELINE ENGINE
+              ROUND HISTORY
             </span>
             <span className="text-xs text-[#D0E6D6]/80 font-mono">100% Zero-Sum Accuracy</span>
           </div>
