@@ -918,64 +918,6 @@ export const SimpleGameView: React.FC = () => {
 
           <div className={`${setupOpen ? 'space-y-4' : 'hidden'} lg:block lg:space-y-4`}>
 
-          {/* Board Fee Config Box */}
-          <div className="cl-card-charcoal bento-card-white p-6 space-y-4 bg-white border border-[#D8D8D8] rounded-[20px]">
-            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-[8px] bg-[#bdadeb] text-black border border-black flex items-center justify-center font-black text-xs">
-                  2
-                </div>
-                <h3 className="text-sm font-extrabold text-black">Board Fee / Round</h3>
-              </div>
-              <span className="text-xs font-mono font-black text-[#194220]">
-                {formatPaise(boardMoneyPaise)} / player
-              </span>
-            </div>
-
-            <p className="text-xs text-[#616161]">
-              Change fee anytime—active round Board Fee and board pot adjust dynamically:
-            </p>
-
-            {/* Presets starting from ₹2, ₹5, ₹10, ₹20, ₹50, ₹100 */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-              {BOARD_FEE_PRESETS.map((amount) => {
-                const isSelected = boardMoneyPaise === amount * 100
-                return (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => handleSelectStakePreset(amount)}
-                    className={`py-2 px-1 rounded-[12px] text-xs font-bold font-mono transition-all cursor-pointer text-center ${
-                      isSelected
-                        ? 'bg-[#B6EA84] text-black border border-black font-black shadow-sm scale-105'
-                        : 'bg-[#F8F8F8] border border-[#D8D8D8] text-[#404040] hover:border-black'
-                    }`}
-                  >
-                    ₹{amount}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Custom Input */}
-            <div className="flex items-center gap-2 pt-1">
-              <span className="text-xs text-[#616161] shrink-0">Custom:</span>
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888888] text-xs font-bold">
-                  ₹
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={customStakeRupees}
-                  onChange={e => handleCustomStakeChange(e.target.value)}
-                  className="w-full bg-[#F8F8F8] border border-[#D8D8D8] rounded-[12px] pl-6 pr-3 py-1.5 text-xs font-mono text-black focus:outline-none focus:border-black"
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Players Box */}
           <div className="cl-card-charcoal bento-card-white p-6 space-y-4 bg-white border border-[#D8D8D8] rounded-[20px]">
             <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
@@ -1096,6 +1038,64 @@ export const SimpleGameView: React.FC = () => {
                   </div>
                 )
               })}
+            </div>
+          </div>
+
+          {/* Board Fee Config Box */}
+          <div className="cl-card-charcoal bento-card-white p-6 space-y-4 bg-white border border-[#D8D8D8] rounded-[20px]">
+            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-[8px] bg-[#bdadeb] text-black border border-black flex items-center justify-center font-black text-xs">
+                  2
+                </div>
+                <h3 className="text-sm font-extrabold text-black">Board Fee / Round</h3>
+              </div>
+              <span className="text-xs font-mono font-black text-[#194220]">
+                {formatPaise(boardMoneyPaise)} / player
+              </span>
+            </div>
+
+            <p className="text-xs text-[#616161]">
+              Change fee anytime—active round Board Fee and board pot adjust dynamically:
+            </p>
+
+            {/* Presets starting from ₹2, ₹5, ₹10, ₹20, ₹50, ₹100 */}
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              {BOARD_FEE_PRESETS.map((amount) => {
+                const isSelected = boardMoneyPaise === amount * 100
+                return (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => handleSelectStakePreset(amount)}
+                    className={`py-2 px-1 rounded-[12px] text-xs font-bold font-mono transition-all cursor-pointer text-center ${
+                      isSelected
+                        ? 'bg-[#B6EA84] text-black border border-black font-black shadow-sm scale-105'
+                        : 'bg-[#F8F8F8] border border-[#D8D8D8] text-[#404040] hover:border-black'
+                    }`}
+                  >
+                    ₹{amount}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Custom Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-[#616161] shrink-0">Custom:</span>
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888888] text-xs font-bold">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={customStakeRupees}
+                  onChange={e => handleCustomStakeChange(e.target.value)}
+                  className="w-full bg-[#F8F8F8] border border-[#D8D8D8] rounded-[12px] pl-6 pr-3 py-1.5 text-xs font-mono text-black focus:outline-none focus:border-black"
+                />
+              </div>
             </div>
           </div>
 
