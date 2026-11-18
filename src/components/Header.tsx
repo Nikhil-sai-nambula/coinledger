@@ -78,7 +78,8 @@ export const Header: React.FC = () => {
                 title="Load sample cards game with completed rounds"
               >
                 <Sparkles size={13} className="text-[#194220]" />
-                <span>Load Demo</span>
+                <span className="sm:hidden">Demo</span>
+                <span className="hidden sm:inline">Load Demo</span>
               </button>
 
               {/* Help & Guide Button */}
